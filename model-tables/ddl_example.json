@@ -1,0 +1,155 @@
+{'Policy': {'database': 'default',
+            'ddl': 'CREATE TABLE Policy (  id SERIAL PRIMARY KEY,  policy_id '
+                   'varchar(100),  name varchar(100),  effectiveDate '
+                   'timestamp,  expirationDate timestamp,  statusCode '
+                   'varchar(100),  version varchar(100),  isActive '
+                   'varchar(100),  premium real)',
+            'fields': ['policy_id',
+                       'name',
+                       'effectiveDate',
+                       'expirationDate',
+                       'statusCode',
+                       'version',
+                       'isActive',
+                       'premium'],
+            'generator': ['IDGEN.get("P-")',
+                          'fake.bs()',
+                          'fake.past_datetime()',
+                          'fake.past_datetime() - datetime.timedelta(365*20)',
+                          "fake.random_element(('10','20','30','40','50','1011','2011'))",
+                          '1.0',
+                          '"true"',
+                          'fake.random_int(min=40, max=1000)'],
+            'insert': 'insert into Policy '
+                      '(policy_id,name,effectiveDate,expirationDate,statusCode,version,isActive,premium) '
+                      'values (%s, %s, %s, %s, %s, %s, %s, %s);',
+            'parent': '',
+            'sub_size': 1},
+ 'Policy_coverage': {'database': 'default',
+                     'ddl': 'CREATE TABLE Policy_coverage (  id SERIAL PRIMARY '
+                            'KEY,  policy_id varchar(20) NOT NULL,  '
+                            'policy_coverage_id varchar(20) NOT NULL,  '
+                            'coverage_id varchar(100),  assset_id '
+                            'varchar(100),  category real,  type real,  value '
+                            'real,  created_at real,  updated_at real,  '
+                            'coverageType real)',
+                     'fields': ['coverage_id',
+                                'policy_id',
+                                'policy_coverage_id',
+                                'assset_id',
+                                'category',
+                                'type',
+                                'value',
+                                'created_at',
+                                'updated_at',
+                                'coverageType'],
+                     'generator': ['fake.random_int(min=40, max=1000)',
+                                   'fake.random_int(min=40, max=1000)',
+                                   'fake.random_int(min=40, max=1000)',
+                                   'fake.random_int(min=40, max=1000)',
+                                   'fake.random_int(min=40, max=1000)',
+                                   'fake.past_datetime(end_date="-90d")',
+                                   'fake.past_datetime(end_date="-30d")',
+                                   'fake.random_element((Comperehensive"'],
+                     'insert': 'insert into Policy_coverage '
+                               '(coverage_id,policy_id,policy_coverage_id,assset_id,category,type,value,created_at,updated_at,coverageType) '
+                               'values (%s, %s, %s, %s, %s, %s, %s, %s, %s, '
+                               '%s);',
+                     'parent': 'Policy',
+                     'sub_size': 20},
+ 'Policy_holder': {'database': 'default',
+                   'ddl': 'CREATE TABLE Policy_holder (  id SERIAL PRIMARY '
+                          'KEY,  policy_id varchar(20) NOT NULL,  '
+                          'policy_holder_id varchar(20) NOT NULL,  firstName '
+                          'varchar(100),  lastName varchar(100),  middleName '
+                          'varchar(100),  suffix varchar(100),  member_id '
+                          'varchar(100))',
+                   'fields': ['firstName',
+                              'policy_id',
+                              'policy_holder_id',
+                              'lastName',
+                              'middleName',
+                              'suffix',
+                              'member_id'],
+                   'generator': ['fake.first_name()',
+                                 'fake.last_name()',
+                                 'fake.first_name()',
+                                 'fake.suffix()',
+                                 'IDGEN.random_value("M-",2000000,10000)'],
+                   'insert': 'insert into Policy_holder '
+                             '(firstName,policy_id,policy_holder_id,lastName,middleName,suffix,member_id) '
+                             'values (%s, %s, %s, %s, %s, %s, %s);',
+                   'parent': 'Policy',
+                   'sub_size': 1},
+ 'Policy_holder_Address': {'database': 'default',
+                           'ddl': 'CREATE TABLE Policy_holder_Address (  id '
+                                  'SERIAL PRIMARY KEY,  policy_holder_id '
+                                  'varchar(20) NOT NULL,  '
+                                  'policy_holder_Address_id varchar(20) NOT '
+                                  'NULL,  name varchar(100),  addressLine1 '
+                                  'varchar(100),  addressLine2 varchar(100),  '
+                                  'city varchar(100),  state varchar(100),  '
+                                  'postalCode varchar(100),  country '
+                                  'varchar(100),  type varchar(100),  '
+                                  'effectiveDate timestamp,  endDate '
+                                  'timestamp)',
+                           'fields': ['name',
+                                      'policy_holder_id',
+                                      'policy_holder_Address_id',
+                                      'addressLine1',
+                                      'addressLine2',
+                                      'city',
+                                      'state',
+                                      'postalCode',
+                                      'country',
+                                      'type',
+                                      'effectiveDate',
+                                      'endDate'],
+                           'generator': ["fake.random_element(('Main', "
+                                         "'Summer', 'Old'))",
+                                         'fake.street_address()',
+                                         'fake.secondary_address()',
+                                         'fake.city()',
+                                         'fake.state_abbr()',
+                                         'fake.postcode()',
+                                         'fake.country()',
+                                         "fake.random_element(('Main', "
+                                         "'Summer', 'Old'))",
+                                         'fake.past_datetime()',
+                                         'fake.future_datetime(end_date="+3y")'],
+                           'insert': 'insert into Policy_holder_Address '
+                                     '(name,policy_holder_id,policy_holder_Address_id,addressLine1,addressLine2,city,state,postalCode,country,type,effectiveDate,endDate) '
+                                     'values (%s, %s, %s, %s, %s, %s, %s, %s, '
+                                     '%s, %s, %s, %s);',
+                           'parent': 'Policy_holder',
+                           'sub_size': 5},
+ 'Policy_insurableAssets': {'database': 'default',
+                            'ddl': 'CREATE TABLE Policy_insurableAssets (  id '
+                                   'SERIAL PRIMARY KEY,  policy_id varchar(20) '
+                                   'NOT NULL,  policy_insurableAssets_id '
+                                   'varchar(20) NOT NULL,  asset_id real,  '
+                                   'category real,  type real,  value real,  '
+                                   'created_at real,  updated_at real,  '
+                                   'coverageType real)',
+                            'fields': ['asset_id',
+                                       'policy_id',
+                                       'policy_insurableAssets_id',
+                                       'category',
+                                       'type',
+                                       'value',
+                                       'created_at',
+                                       'updated_at',
+                                       'coverageType'],
+                            'generator': ['fake.random_int(min=40, max=1000)',
+                                          'fake.random_int(min=40, max=1000)',
+                                          'fake.random_int(min=40, max=1000)',
+                                          'fake.random_int(min=40, max=1000)',
+                                          'fake.past_datetime(end_date="-90d")',
+                                          'fake.past_datetime(end_date="-30d")',
+                                          'fake.random_element((Comperehensive"'],
+                            'insert': 'insert into Policy_insurableAssets '
+                                      '(asset_id,policy_id,policy_insurableAssets_id,category,type,value,created_at,updated_at,coverageType) '
+                                      'values (%s, %s, %s, %s, %s, %s, %s, %s, '
+                                      '%s);',
+                            'parent': 'Policy',
+                            'sub_size': 1}}

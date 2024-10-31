@@ -1,0 +1,64 @@
+Resource.Property,Property Type,Generator
+Member.member_id,String,"IDGEN.get(""M-"")","""M-"" + Incremental 1- 65 million"
+Member.lastName,String,fake.last_name()
+Member.firstName,String,fake.first_name()
+Member.middleName,String,fake.first_name()
+Member.suffix,String,fake.suffix()
+Member.SSN,String,fake.ssn()
+Member.dateOfBirth,date,"fake.past_datetime() - datetime.timedelta(365*20)"
+Member.gender,String,"fake.random_element(('Male', 'Female', 'Other'))"
+Member.ethnicity,String,"fake.random_element(('White', 'American Indian', 'Asian', 'Hispanic', 'African American'))"
+Member.maritialStatus,String,"fake.random_element(('Married', 'Widow', 'Single'))"
+Member.primaryProvider_id,String,"IDGEN.random_value(""P-"")"
+Member.EffectiveDate,Date,"fake.past_datetime(start_date=""-90d"")"
+Member.EndDate,Date,"fake.future_datetime(end_date=""+8y"")"
+Member.CitizenshipStatusCode,String,"fake.random_element(('Native', 'Naturalised', 'Alien Permanent', 'Alien Temporary', 'Citizen', 'Foreign Worker', 'Permanent Resident', 'Foreigh ID Card Holder'))"
+Member.EndDate,Date,"fake.future_datetime(end_date=""+10y"")"
+Member.SitusState,String,"fake.state_abbr()"
+Member.Weight,Integer,"fake.random_int(min=1, max=400)"
+Member.PlanYear,Integer,"fake.random_int(min=2023, max=2023)"
+Member.TotalPayments,double,"fake.random_int(min=20, max=1200)"
+Member.Address().name,String,"fake.random_element(('Main', 'Summer', 'Old'))"
+Member.Address().addressLine1,String,fake.street_address()
+Member.Address().addressLine2,String,fake.secondary_address()
+Member.Address().city,String,fake.city()
+Member.Address().state,String,fake.state_abbr()
+Member.Address().postalCode,String,fake.postcode()
+Member.Address().country,String,fake.country()
+Member.Address().type,String,"fake.random_element(('Main', 'Summer', 'Old'))"
+Member.Address().effectiveDate,date,"fake.past_datetime(start_date=""-90d"")"
+Member.Address().endDate,date,"fake.future_datetime(end_date=""+3y"")"
+Member.Address().wheelchairAccess,boolean,fake.boolean(chance_of_getting_true=10)
+Member.Communication().phoneNumber,String,fake.phone_number()
+Member.Communication().phonetype,String,"fake.random_element(('Home', 'Work', 'Cell', 'Fax', 'Pager'))"
+Member.Communication().emailAddress,String,fake.email()
+Member.Communication().emailtype,String,"fake.random_element(('Home', 'Work'))"
+Member.Communication().SocialMediaID,String,fake.user_name()
+Member.Communication().SocialMediaType,String,"fake.random_element(('Facebook', 'Academia.edu', 'Bebo', 'CaringBridge', 'GoodReads', 'DailyStrength', 'Google+'))"
+Member.languages().language,String,"fake.random_element(('Albanian', 'Farsi', 'Hindi', 'Korean', 'Polish', 'Spanish', 'Arabic', 'French', 'Hmong', 'Laotian', 'Portuguese', 'Tagalog', 'Armenian', 'German', 'Italian', 'Lithuanian', 'Punjabi', 'Thai', 'Bengali', 'Greek', 'Japanese', 'Malay', 'Romanian', 'Turkish', 'Burmese', 'Haitian Creole'))"
+Member.languages().Usage,String,"fake.random_element(('Spoken', 'Reading', 'Writing', 'Native'))","Spoken, Reading, Writing, Native"
+Member.Disability().DisabilityPeriodStartDate,date,"fake.past_datetime(start_date=""-90d"")"
+Member.Disability().DisabilityPeriodEndDate,date,"fake.future_datetime(end_date=""+3y"")"
+Member.Disability().DisabilityTypeCode,String ,"fake.random_element(('Autism', 'Emotional Disability', 'Hearing Impairement', 'Intellectual Disability', 'Other Health Imparement', 'Traumatic Brain Injury', 'Visual Imparement'))"
+Member.Guardian().LastName,String ,fake.last_name()
+Member.Guardian().FirstName,String ,fake.first_name()
+Member.Guardian().Type,String ,"fake.random_element(('Natural', 'Legal', 'Medical', 'Custodial'))"
+Member.Guardian().Addressname,String,"fake.random_element(('Main', 'Summer', 'Old'))"
+Member.Guardian().AddressLine1,String,fake.street_address()
+Member.Guardian().AddressLine2,String,fake.secondary_address()
+Member.Guardian().Addresscity,String,fake.city()
+Member.Guardian().Addressstate,String,fake.state_abbr()
+Member.Guardian().AddresspostalCode,String,fake.postcode()
+Member.Guardian().Addresscountry,String,fake.country()
+Member.Guardian().Addresstype,String,"fake.random_element(('Main', 'Summer', 'Old'))"
+Member.Guardian().AddresseffectiveDate,date,"fake.past_datetime(start_date=""-90d"")"
+Member.Guardian().AddressendDate,date,"fake.future_datetime(end_date=""+3y"")"
+Member.Guardian().AddresswheelchairAccess,boolean,fake.boolean(chance_of_getting_true=75)
+Member.Payment().claim_id,String ,"fake.random_int(min=40, max=1000)"
+Member.Payment().payment_date,date ,"fake.past_datetime(start_date=""-90d"")"
+Member.Payment().amount,double ,"fake.random_int(min=40, max=1000)"
+Member.BankAccount.BankName,String ,"fake.company()"
+Member.BankAccount.BankAccountHolderName,String ,fake.name()
+Member.BankAccount.BankAccountNumber,String ,"fake.iban()"
+Member.BankAccount.BankAccountType,String ,"fake.random_element(('Checking', 'Savings'))"
+Member.BankAccount.BankRoutingNumber,String ,"fake.iban()"

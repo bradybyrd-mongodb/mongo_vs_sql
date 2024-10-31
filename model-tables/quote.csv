@@ -1,0 +1,35 @@
+Resource.Property,Property Type,Optional/Required,Generator,Sample Data
+Quote.quote_id,String,Required,"IDGEN.get(""Q-"")","""Q-"" + Incremental 1- 65 million"
+Quote.session_id,String,Required,"IDGEN.random_value(""PR-"",2000000,100)",Text
+Quote.cart_id,String,Required,"IDGEN.random_value(""CA-"",2000000,100)",Text
+Quote.name,String,Required,fake.name(),Smith
+Quote.email,String,Required,fake.email(),Smith
+Quote.createdDate,date,Required,"datetime.datetime.now() - datetime.timedelta(15*20)",0
+Quote.effectiveDate,date,Required,"fake.past_datetime()",0
+Quote.expirationDate,date,Required,"datetime.datetime.now()",0
+Quote.statusCode,String,Required,"fake.random_element(('10','20','30','40','50','1011','2011'))",0
+Quote.version,String,Optional,"'1.0'",Sam
+Quote.isActive,String,Optional,"""true""",True
+Quote.premium,integer,Optional,"fake.random_int(min=40, max=1000)",0
+Quote.applicant().applicant_id,String,Optional,"IDGEN.random_value(""A-"",2000000,10000)","M-1010"
+Quote.applicant().firstName,String,Optional,fake.first_name(),Elijah
+Quote.applicant().lastName,String,Optional,fake.last_name(),Dolittle
+Quote.applicant().middleName,String,Optional,fake.first_name(),Elijah
+Quote.applicant().suffix,String,Optional,fake.suffix(),esq
+Quote.applicant().postalCode,String,Optional,fake.postcode(),0
+Quote.applicant().isRated,boolean,Optional,"fake.boolean(chance_of_getting_true=75)",0
+Quote.applicant().email,String,Optional,fake.email(),0
+Quote.coverage().name,String,Optional,fake.bs(),Prescription
+Quote.coverage().description,Text,Optional,fake.paragraph(),Prescription
+Quote.coverage().coverageType,String,Optional,"fake.random_element(('Umbrella', 'Auto-liability','Auto-collision','Auto-windshield','Home-general','Home-liability','Home-pool','Driver-additional'))",Prescription
+Quote.coverage().deductibleType,String,Optional,"fake.random_element(('Annual', 'per-incidient','percentage','co-payment'))",Prescription
+Quote.coverage().deductibleAmmount,integer,Optional,"fake.random_int(min=20, max=1000)",20
+Quote.coverage().deductibleConditions().conditionName,String,Optional,"fake.random_element(('flood-zone','alcohol-exclusion','over-25','max-points'))",20
+Quote.coverage().deductibleConditions().factor,String,Optional,"fake.random_element(('Percentage','Fixed-amount','Not-to-exceed'))",20
+Quote.coverage().deductibleConditions().factorAmount,integer,Optional,"fake.random_int(min=20, max=1000)",20
+Quote.coverage().limit().limitTypeCode,String,Optional,"fake.random_element(('H01', 'L02','B1A','BBX'))",Prescription
+Quote.coverage().limit().limitValue,integer,Optional,"fake.random_int(min=20, max=1000)",20
+Quote.coverage().limit().limitBasisCode,String,Optional,"fake.random_element(('H01', 'L02','B1A','BBX'))",20
+Quote.coverage().physicalLocation().name,String,Optional,"fake.bs()",20
+Quote.coverage().physicalLocation().longitude,real,Optional,"float(fake.longitude())",71.6875
+Quote.coverage().physicalLocation().latitude,real,Optional,"float(fake.latitude())",45.2463
