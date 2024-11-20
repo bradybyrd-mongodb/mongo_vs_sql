@@ -289,3 +289,112 @@ pipe = [
     claim_age: {$avg: '$claim_age'}
   }}
 ]
+
+# -------------------------------------------------------------- #
+#  Demo Transactions
+# -------------------------------------------------------------- #
+#  8/2/23
+- Remember to set _PWD_ and _PGPWD_ env vars
+- Uses ClaimsDemo and GCP CloudSQL
+
+- 100 transactions Mongodb
+python3 performance.py action=transaction_mongodb num_transactions=100 mcommit=false
+
+python3 performance.py action=transaction_mongodb num_transactions=1 mcommit=true
+
+- 100 Transactions Postgres
+python3 performance.py action=transaction_postgres num_transactions=100
+
+# --------------- Queries ----------------- #
+python3 performance.py action=get_claims_sql query=claim patient_id=M-2030005 iters=100
+python3 performance.py action=get_claims_sql query=claimLinePayments patient_id=M-2030005 iters=100
+python3 performance.py action=get_claims_sql query=claimMemberProvider patient_id=M-2030005 iters=100
+
+python3 performance.py action=get_claims_mongodb query=claim patient_id=M-2000071 iters=100
+python3 performance.py action=get_claims_mongodb query=claimMemberProvider patient_id=M-2000071 iters=100
+# -----  API Emulation ---------------- #
+- SQL
+python3 performance.py action=get_claim_api_sql claim_id=C-2030009 iters=10
+- MongoDB
+python3 performance.py action=get_claim_api claim_id=C-1000009 iters=10
+
+# ---------------------------------------------------------------------- #
+#             Spanner Demo
+# 7/2/24
+python3 performance.py action=get_claims_mongodb query=claim patient_id=M-2009050 iters=10 inc=10
+python3 performance.py action=get_claims_mongodb query=claimMemberProvider patient_id=M-2009050 iters=10 inc=10
+python3 performance.py action=get_claims_sql query=claim patient_id=M-2016016 iters=10 inc=10 
+python3 performance.py action=get_claims_sql query=claimLinePayments patient_id=M-2016016 iters=10 inc=10
+python3 performance.py action=get_claims_sql query=claimMemberProvider patient_id=M-2016016 iters=10 inc=10
+
+
+
+# ---------------------------------- 
+elapsed = datetime.datetime.now() - start
+    logging.debug(f"query took: {elapsed.microseconds / 1000} ms")
+
+    https://teams.microsoft.com/l/meetup-join/19:meeting_ZGE4YzdiOGYtYTYzMS00NTU4LTg0ZWMtMjhmYzRkZWNkYWUx@thread.v2/0?context=%7B%22Tid%22:%22c96563a8-841b-4ef9-af16-33548de0c958%22,%22Oid%22:%2250c3494c-896c-4fb0-940d-77bfca783190%22%7D
+
+    https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZGE4YzdiOGYtYTYzMS00NTU4LTg0ZWM[…]2c%22Oid%22%3a%2250c3494c-896c-4fb0-940d-77bfca783190%22%7d
+
+
+# ----------------- Claim Query --------------------------- #
+select c.*, cl.adjudicationdate, cl.attendingprovider_id, cl.placeofservice, cl.procedurecode, cl.quantity, cl.servicefromdate, cl.serviceenddate, cp.approvedamount, cp.coinsuranceamount, cp.copayamount, cp.paidamount, cp.paiddate,
+cp.patientpaidamount, cp.payerpaidamount, cp.modified_at as last_payment_activity, cd.code as diagnosis from claim c
+    LEFT OUTER JOIN claim_claimline cl on cl.claim_id = c.claim_id
+    LEFT JOIN claim_payment cp on cp.claim_id = c.claim_id
+    LEFT JOIN claim_diagnosiscode cd on cd.claim_id = c.claim_id
+WHERE c.claim_id = 'C-2003017'
+
+# -------------------- Transaction MongoDB ----------------------------- #
+with client.start_session() as session:
+    logging.debug(f"Transaction started for claim {claim_id}")
+    with session.start_transaction():
+        claim_update = claim.find_one_and_update({"Claim_id": claim_id},{"$addToSet": {"Payment": payment[i]}},
+            projection={"Patient_id": 1},
+            session=session)
+        member.update_one(
+            {"Member_id": claim_update["Patient_id"]},
+            {"$inc": {"total_payments": payment[i]["PatientPaidAmount"]}},
+            session=session)
+        session.commit_transaction()
+
+# -------------------- Transaction Postgres ----------------------------- #
+cur = conn.cursor()
+SQL_INSERT = (
+    f"INSERT INTO claim_payment(claim_payment_id, claim_id, approvedamount, coinsuranceamount, copayamount, latepaymentinterest, paidamount, paiddate, patientpaidamount, patientresponsibilityamount, payerpaidamount, modified_at)"
+    f"VALUES ('{pmt['claim_payment_id']}', '{pmt['claim_id']}', {payment[i]['ApprovedAmount']}, {payment[i]['CoinsuranceAmount']}, {payment[i]['CopayAmount']}, {payment[i]['LatepaymentInterest']}, {payment[i]['PaidAmount']}, '{payment[i]['PaidDate']}', {payment[i]['PatientPaidAmount']}, {payment[i]['PatientResponsibilityAmount']}, {payment[i]['PayerPaidAmount']}, now() );"
+)
+# claim + update total payment claim
+SQL_UPDATE_CLAIM = (
+    f"UPDATE public.claim "
+    f'SET totalpayments=  COALESCE(totalpayments ,0)  + {payment[i]["PatientPaidAmount"]} '
+    f"WHERE claim_id = '{claim_id}';"
+)
+# FIND MEMBER ID
+member_id = sql_query(
+    f"select patient_id from claim WHERE claim_id = '{claim_id}'", conn
+)
+member_id = member_id["data"][0][0]
+# members + update total payment
+SQL_UPDATE_MEMBER = (
+    f"UPDATE public.member "
+    f'SET totalpayments = COALESCE(totalpayments ,0) + {payment[i]["PatientPaidAmount"]} '
+    f"WHERE member_id = '{member_id}';"
+)
+SQL_TRANSACTION = (
+    f"BEGIN;"
+    f"{SQL_INSERT} "
+    f"{SQL_UPDATE_CLAIM} "
+    f"{SQL_UPDATE_MEMBER} "
+    f"COMMIT;"
+)
+
+# ------------- Form Transaction Example --------------------- #
+Claim Status
+Claim Note
+Claim Diagnosis Code
+Payment
+Member Name
+Member Address
+Member Communication

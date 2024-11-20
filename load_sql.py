@@ -8,6 +8,7 @@ import datetime
 from decimal import Decimal
 import random
 import time
+import string
 import re
 import multiprocessing
 import pprint
@@ -26,7 +27,7 @@ from deepmerge import Merger
 import uuid
 
 fake = Faker()
-#letters = string.ascii_uppercase
+letters = string.ascii_uppercase
 
 """
  #  Relations Demo
