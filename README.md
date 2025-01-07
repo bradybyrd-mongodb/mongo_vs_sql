@@ -1,15 +1,26 @@
-# -------------------------------------------------------#
 #  Relational Comparison Demo
 This collection of scripts highlight differences working with the same data set in Postgres and MongoDB.  The comparisons include data generation, query performance, code complexity and transactions.  There is also a comparison of serving a json payload to an API - the most common application use case.
 
 
-# ------------------------------------------------------ #
 ## Environment Setup ##
-The scripts will run in Python 3.9 and above
+The scripts will run in Python 3.9 and above.  Load the python libs with this:
+```bash
 pip install -r requirements.txt
+```
+
+### Postgres Schema Creation: ###
+Unlike mongoDB, relational databases need a predefined schema for data to land in. The load_sql.py script can create the DDL statements for postgres from the csv files.  Here are a few command to illustrate the process.
+```bash
+python3 load_sql.py action=show_ddl template=model-tables/claim.csv
+python3 load_sql.py action=execute_ddl task=create template=model-tables/claim.csv
+```
+
+The show_ddl command is great for both postgres and mongoDB as it will validate the format of the csv file and how the script will process it.  An important first step if you have modified any of the csv files.
+
+The execute_ddl command will create the tables, sequences and constraints in postgres (make sure your postgres user has permissions to do this).  Note - if the database object already exists, it will ignore the step and move to the next object. 
 
 
-- Data loading
+## Data Loading ##
 Data can be built in both Postgres and MongoDB using the same configuration files.  Samples are contained in the model-tables folder.  The files are csv format for simplicity.  Here is an example:
 
 ```csv
@@ -27,7 +38,7 @@ Member.Address().addressLine1,String,fake.street_address()
 - You can sepcify the number of subdocuments created by entering a number in the parenthesis like this:
 Member.Address(12)
 
-### Configuration:###
+### Configuration: ###
 Most properties are controlled by the relations_setting.json file.  This needs to be modified for your needs.  Here are a few of the key settings:
 ```json
 {
@@ -70,11 +81,11 @@ Most properties are controlled by the relations_setting.json file.  This needs t
 }
 ```
 
-### Database Connections:###
+### Database Connections: ###
 
  For each database connection, enter the parameters in the section.  The collection parameter will be ignored in the mongodb section unless you are running some utility method.  Note that the password is masked here.  It will use a password if you enter one, however, that is not very secure.  If it says <secret>, the script will look for the environment variable _PWD_ for mongodb and _PGPWD_ for postgres.
 
-### Data Volume:###
+### Data Volume: ###
 
  Several parameters govern the amount of data generated.  The loader uses a bulk load and the "batch_size" works with that.  In the absence of a specific size parameter in the settings file or command line, the script will use the "batches" parameter to build that data.  Additionally, the process count determines the number of threads in the loader.  You can also setup a group of files to load using the "data" parameter, this eliminates the need to define things on the command line. As an example, this will load the provider/member/claim system:
 ```bash
@@ -97,9 +108,63 @@ python3 load_mongo.py action=load_data template=model-tables/member.csv #(MongoD
 
 The script will use the "batch size" and "batches" parameters which will create this much data:
   - Member - 1000 * 10 * 3 = 30,000, in 10 batches/process thread
+
 In mongoDB, the "version" parameter will add a field called version with that value
 
+## About the Data ##
+The example CSV scripts will create a model of a health insurance Claim system.  A "member" goest to a "provider" and creates a "claim".  In mongoDB this creates 3 collections. Note that the claim has substantial depth to it: A claim can be delivered in multiple claim_lines, each of which may have different payment and diagnosis codes. In postgres this creates a system of nearly 30 tables.  The scripts in performance hide some of the complexity from the demo. Here is a postgres query to show a claim:
+```sql
+select c.*, cp.*, cn.*, cl.claim_claimline_id, cl.adjudicationdate, cl.attendingprovider_id as cl_attendingprovider_id, 
+cl.modified_at as cl_modified_at, cl.operatingprovider_id, cl.orderingprovider_id, cl.otheroperatingprovider_id, cl.placeofservice, cl.procedurecode, cl.quantity, cl.referringprovider_id as cl_referringprovider_id, 
+cl.renderingprovider_id as cl_renderingprovider_id, cl.serviceenddate as cl_serviceenddate, 
+cl.servicefromdate as cl_servicefromdate, cl.supervisingprovider_id as cl_supervisingprovider_id, 
+cl.unit, clp.approvedamount as clp_approvedamount, clp.coinsuranceamount as clp_coinsuranceamount, 
+clp.copayamount as clp_copayamount, clp.allowedamount as clp_allowedamount, 
+clp.paidamount as clp_paidamount, clp.paiddate as clp_paiddate, clp.patientpaidamount as clp_patientpaidamount, 
+clp.patientresponsibilityamount as clp_patientresponsibilityamount, clp.payerpaidamount as clp_payerpaidamount
+from claim_claimline cl inner join claim c on cl.claim_id = c.claim_id
+left join claim_notes cn on cn.claim_id = c.claim_id 
+left join claim_payment cp on cp.claim_id = c.claim_id
+left join claim_claimline_payment clp on cl.claim_claimline_id = clp.claim_claimline_id
+left join claim_claimline_diagnosiscodes cld on cld.claim_claimline_id = cl.claim_claimline_id
+left join claim_diagnosiscode cd on c.claim_id = cd.claim_id
+where c.claim_id in ('C-2100000')
+order by c.claim_id
+```
+This produces a grid nearly 250 columns wide with nearly 100 rows per claim.
 
+Here is the equivalent query in mongoDB:
+```json
+db.claim.findOne({claim_id: "C-2100000"})
+```
+This produces a single hierarchical json document that nayone can read.
+
+## Usage Examples: ##
+```bash
+# --------------- Transactions ----------------- #
+# 100 transactions Mongodb
+python3 performance.py action=transaction_mongodb num_transactions=100 mcommit=false
+python3 performance.py action=transaction_mongodb num_transactions=1 mcommit=true
+
+# 100 Transactions Postgres
+python3 performance.py action=transaction_postgres num_transactions=100
+
+# --------------- Queries ----------------- #
+python3 performance.py action=get_claims_sql query=claim patient_id=M-2030005 iters=100
+python3 performance.py action=get_claims_sql query=claimLinePayments patient_id=M-2030005 iters=100
+python3 performance.py action=get_claims_sql query=claimMemberProvider patient_id=M-2030005 iters=100
+
+python3 performance.py action=get_claims_mongodb query=claim patient_id=M-2000071 iters=100
+python3 performance.py action=get_claims_mongodb query=claimMemberProvider patient_id=M-2000071 iters=100
+
+# -----  API Emulation ---------------- #
+# SQL
+python3 performance.py action=get_claim_api_sql claim_id=C-2030009 iters=10
+# MongoDB
+python3 performance.py action=get_claim_api claim_id=C-1000009 iters=10
+```
+## About the Data ##
+The example CSV scripts will create a model of a health insurance Claim system.  A "member" goest to a "provider" and creates a "claim"
 
 
 
@@ -226,7 +291,7 @@ WHERE c.patient_id IN ('M-1000007','M-1000008','M-1000009','M-1000010')
 
 # ----------------------------------------------------------#
 # Show a claim:
-select c.*, m.firstname, m.lastname, m.dateofbirth, m.gender, cl.*, ap.firstname as ap_first, ap.lastname as ap_last, ap.gender as ap_gender, ap.dateofbirth as ap_birthdate, 
+select c.*, cl.*, ap.firstname as ap_first, ap.lastname as ap_last, ap.gender as ap_gender, ap.dateofbirth as ap_birthdate, 
   op.firstname as op_first, op.lastname as op_last, op.gender as op_gender, op.dateofbirth as op_birthdate, 
   rp.firstname as rp_first, rp.lastname as rp_last, rp.gender as rp_gender, rp.dateofbirth as rp_birthdate, 
   opp.firstname as opp_first, opp.lastname as opp_last, opp.gender as opp_gender, opp.dateofbirth as opp_birthdate 
@@ -238,6 +303,24 @@ select c.*, m.firstname, m.lastname, m.dateofbirth, m.gender, cl.*, ap.firstname
   INNER JOIN provider rp on cl.referringprovider_id = rp.provider_id 
   INNER JOIN provider opp on cl.operatingprovider_id = opp.provider_id 
   where c.patient_id = 'M-1000004'
+
+select c.*, cp.*, cn.*, cl.claim_claimline_id, cl.adjudicationdate, cl.attendingprovider_id as cl_attendingprovider_id, 
+cl.modified_at as cl_modified_at, cl.operatingprovider_id, cl.orderingprovider_id, cl.otheroperatingprovider_id, cl.placeofservice, cl.procedurecode, cl.quantity, cl.referringprovider_id as cl_referringprovider_id, 
+cl.renderingprovider_id as cl_renderingprovider_id, cl.serviceenddate as cl_serviceenddate, 
+cl.servicefromdate as cl_servicefromdate, cl.supervisingprovider_id as cl_supervisingprovider_id, 
+cl.unit, clp.approvedamount as clp_approvedamount, clp.coinsuranceamount as clp_coinsuranceamount, 
+clp.copayamount as clp_copayamount, clp.allowedamount as clp_allowedamount, 
+clp.paidamount as clp_paidamount, clp.paiddate as clp_paiddate, clp.patientpaidamount as clp_patientpaidamount, 
+clp.patientresponsibilityamount as clp_patientresponsibilityamount, clp.payerpaidamount as clp_payerpaidamount
+from claim_claimline cl inner join claim c on cl.claim_id = c.claim_id
+left join claim_notes cn on cn.claim_id = c.claim_id 
+left join claim_payment cp on cp.claim_id = c.claim_id
+left join claim_claimline_payment clp on cl.claim_claimline_id = clp.claim_claimline_id
+left join claim_claimline_diagnosiscodes cld on cld.claim_claimline_id = cl.claim_claimline_id
+left join claim_diagnosiscode cd on c.claim_id = cd.claim_id
+where c.claim_id in ('C-2100000', 'C-2100011', 'C-2100099')
+order by c.claim_id
+
 
 db.claim.findOne({patient_id: "M-1000567"})
 
