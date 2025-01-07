@@ -137,7 +137,7 @@ Here is the equivalent query in mongoDB:
 ```python
 db.claim.findOne({claim_id: "C-2100000"})
 ```
-This produces a single hierarchical json document that nayone can read.
+This produces a single hierarchical json document that anyone can read.
 
 ## Usage Examples: ##
 ```bash
@@ -163,114 +163,19 @@ python3 performance.py action=get_claim_api_sql claim_id=C-2030009 iters=10
 # MongoDB
 python3 performance.py action=get_claim_api claim_id=C-1000009 iters=10
 ```
-## About the Data ##
-The example CSV scripts will create a model of a health insurance Claim system.  A "member" goest to a "provider" and creates a "claim"
 
+###  SQL Queries ###
 
-
-
-
-
-
-
-
-
-
-
-
-# -------------------------------------------------------#
-#  9/30/24 Side by Side comparison
-Development - Springboot with Postgres and MongoDB
-GOAL: A side by side video that shows progress in developing an app
-Assumption: Working with MongoDB is massively more efficient, as app development
-proceeds, we should see mongodb jump way out in front.
-SETTING: An established Postgres application is getting a 2.0 upgrade
-The upgrade involves considerable refactoring of data as well as new development
-The application
-
-
-Common Relational Use Cases
-  One:One
-  One:Many
-  Many:Many
-  Multi-Parent
-
-  Common Relational Use Cases
-    One:One
-    One:Many
-    Many:Many
-    Multi-Parent
-
-  Using standard Relational Model
-
-  Members
-    has many claims
-
-  Providers
-    has many claims
-
-  Conditions
-    has many claims
-    has many members
-
-  Claims
-    has one member
-    has one condition
-    has one provider
-
-  Member
-    has many claims
-    has many providers through claims
-    has many conditions through claims
-
-#---------------  Catalog --------------------#
-
-      Customers
-        Has many Orders
-      Inventory
-      - belongs to Catalog
-      - subtract when order placed
-      Orders
-      - belongs to Customer
-      - has many Items
-      -- Items
-        - belongs to Orders
-        - belongs to Catalog
-
-    Collections:
-      Customers:
-        - name
-        - address
-        - etc
-        - recent_orders
-          - order
-            - items
-      Orders:
-        - date
-        - customer
-          - thumbnail
-        - items
-          - itemid
-          - name
-          - qty
-          - unit_price
-      Catalog:
-        - item
-        - description
-        - unit_price
-        - inventory
-        - next_date
-
-# ----------------------------------------------------------#
-#  SQL Queries
-# 8/5/22
-
+Simple member join to show member and address
+```sql
 select m.firstname, m.lastname, m.member_id, m.gender, ma.city, ma.state
 from member m
 left join (select member_id, city, state from member_address where member_id IN ('M-1000007','M-1000008','M-1000009','M-1000010') and name = 'Main') ma on ma.member_id = m.member_id
 where m.member_id IN ('M-1000007','M-1000008','M-1000009','M-1000010');
+```
 
-
+Claim with resolved providers
+```sql
 select c.claim_id, c.claimstatus, c.claimtype, c.servicefromdate, m.firstname, m.lastname, m.dateofbirth, m.gender, cl.*, ap.firstname as ap_first, ap.lastname as ap_last, ap.gender as ap_gender, ap.dateofbirth as ap_birthdate, 
 op.firstname as op_first, op.lastname as op_last, op.gender as op_gender, op.dateofbirth as op_birthdate, 
 rp.firstname as rp_first, rp.lastname as rp_last, rp.gender as rp_gender, rp.dateofbirth as rp_birthdate, 
@@ -288,222 +193,20 @@ INNER JOIN (select * from member_communication where emailtype = 'Work' and memb
 LEFT JOIN (select member_id, usage, language from member_languages where member_id IN ('M-1000007','M-1000008','M-1000009','M-1000010') and usage = 'Native') ml on ml.member_id = m.member_id 
 LEFT JOIN (select member_id, employeeidentificationnumber from member_employment where member_id IN ('M-1000007','M-1000008','M-1000009','M-1000010') limit 1) me on me.member_id = m.member_id
 WHERE c.patient_id IN ('M-1000007','M-1000008','M-1000009','M-1000010')
+```
 
-# ----------------------------------------------------------#
-# Show a claim:
-select c.*, cl.*, ap.firstname as ap_first, ap.lastname as ap_last, ap.gender as ap_gender, ap.dateofbirth as ap_birthdate, 
-  op.firstname as op_first, op.lastname as op_last, op.gender as op_gender, op.dateofbirth as op_birthdate, 
-  rp.firstname as rp_first, rp.lastname as rp_last, rp.gender as rp_gender, rp.dateofbirth as rp_birthdate, 
-  opp.firstname as opp_first, opp.lastname as opp_last, opp.gender as opp_gender, opp.dateofbirth as opp_birthdate 
-  from claim c  
-  INNER JOIN member m on m.member_id = c.patient_id 
-  LEFT OUTER JOIN claim_claimline cl on cl.claim_id = c.claim_id 
-  INNER JOIN provider ap on cl.attendingprovider_id = ap.provider_id
-  INNER JOIN provider op on cl.orderingprovider_id = op.provider_id 
-  INNER JOIN provider rp on cl.referringprovider_id = rp.provider_id 
-  INNER JOIN provider opp on cl.operatingprovider_id = opp.provider_id 
-  where c.patient_id = 'M-1000004'
-
-select c.*, cp.*, cn.*, cl.claim_claimline_id, cl.adjudicationdate, cl.attendingprovider_id as cl_attendingprovider_id, 
-cl.modified_at as cl_modified_at, cl.operatingprovider_id, cl.orderingprovider_id, cl.otheroperatingprovider_id, cl.placeofservice, cl.procedurecode, cl.quantity, cl.referringprovider_id as cl_referringprovider_id, 
-cl.renderingprovider_id as cl_renderingprovider_id, cl.serviceenddate as cl_serviceenddate, 
-cl.servicefromdate as cl_servicefromdate, cl.supervisingprovider_id as cl_supervisingprovider_id, 
-cl.unit, clp.approvedamount as clp_approvedamount, clp.coinsuranceamount as clp_coinsuranceamount, 
-clp.copayamount as clp_copayamount, clp.allowedamount as clp_allowedamount, 
-clp.paidamount as clp_paidamount, clp.paiddate as clp_paiddate, clp.patientpaidamount as clp_patientpaidamount, 
-clp.patientresponsibilityamount as clp_patientresponsibilityamount, clp.payerpaidamount as clp_payerpaidamount
-from claim_claimline cl inner join claim c on cl.claim_id = c.claim_id
-left join claim_notes cn on cn.claim_id = c.claim_id 
-left join claim_payment cp on cp.claim_id = c.claim_id
-left join claim_claimline_payment clp on cl.claim_claimline_id = clp.claim_claimline_id
-left join claim_claimline_diagnosiscodes cld on cld.claim_claimline_id = cl.claim_claimline_id
-left join claim_diagnosiscode cd on c.claim_id = cd.claim_id
-where c.claim_id in ('C-2100000', 'C-2100011', 'C-2100099')
-order by c.claim_id
-
-
-db.claim.findOne({patient_id: "M-1000567"})
-
-db.claim.find({age: {$gt: 41}})
-
-{patient_id : {$in : ['M-1000004','M-1000005','M-1000006','M-1000095','M-1000105']}}
-
-# ----------------------------------------------------------#
-#  Presciption Model
-#  1/6/23
-
-Patient / Presciption / Provider
-
-Same as Member/Provider
-Just need prescription
-
-# ----------------------------------------------------------#
-#  Cliam-Member phi lookup
-#  1/23/23
-
-pipe = [
-  {$match : {placeOfService: "School"}},
-  {'$lookup': {
-        'from': 'member', 
-        'localField': 'patient_id', 
-        'foreignField': 'member_id',  
-        'as': 'member_details'
-    }
-  },
-  {$unwind: {path: "member_details"}} 
-]
-
-pipe = [
-  {$match : {version: "1.6"}},
-  {$limit: 100},
-  {'$lookup': {
-        'from': 'claim_phi', 
-        'localField': 'member_id', 
-        'foreignField': 'patient_id',
-        'pipeline': [
-            {'$project': {'_id': 0, claim_id: 1, 'attendingProvider_id': 1, claimStatus: 1, claimStatusDate: 1, claimType: 1, placeOfService: 1, serviceFromDate: 1}}
-        ],
-        'as': 'recent_claims'
-    }
-  } 
-]
-# ----------------------------- #
-[
-  {$match: {version: '1.5', claimType: 'Dental'}},
-  {$lookup: {
-    from: 'member',
-    localField: 'patient_id',
-    foreignField: 'member_id',
-    pipeline: [
-      {$limit: 1}
-    ],
-    as: 'member'
-  }}, 
-  {$unwind: {path: '$member'}}, 
-  {$project: {
-    claimStatus: 1,
-    claim_id: 1,
-    placeOfService: 1,
-    serviceFromDate: 1,
-    age: {
-      $dateDiff: {
-      startDate: '$member.phi.dateOfBirth',
-      endDate: '$$NOW',
-      unit: 'year'
-      }
-    },
-    claim_age: {
-      $dateDiff: {
-      startDate: '$serviceFromDate',
-      endDate: '$$NOW',
-      unit: 'day'
-      }
-    }
-  }}, 
-  {$group: {
-    _id: '$placeOfService',
-    avg_age: {$avg: '$age'},
-    claim_age: {$avg: '$claim_age'}
-  }}
-]
-
-[
-  {$match: {version: '1.5'}},
-  {$lookup: {
-    from: 'member',
-    localField: 'patient_id',
-    foreignField: 'member_id',
-    pipeline: [
-      {$limit: 1}
-    ],
-    as: 'member'
-  }}, 
-  {$unwind: {path: '$member'}}
-]
-  {$project: {
-    claimStatus: 1,
-    claim_id: 1,
-    placeOfService: 1,
-    serviceFromDate: 1,
-    age: {
-      $dateDiff: {
-      startDate: '$member.phi.dateOfBirth',
-      endDate: '$$NOW',
-      unit: 'year'
-      }
-    },
-    claim_age: {
-      $dateDiff: {
-      startDate: '$serviceFromDate',
-      endDate: '$$NOW',
-      unit: 'day'
-      }
-    }
-  }}, 
-  {$group: {
-    _id: '$placeOfService',
-    avg_age: {$avg: '$age'},
-    claim_age: {$avg: '$claim_age'}
-  }}
-]
-
-# -------------------------------------------------------------- #
-#  Demo Transactions
-# -------------------------------------------------------------- #
-#  8/2/23
-- Remember to set _PWD_ and _PGPWD_ env vars
-- Uses ClaimsDemo and GCP CloudSQL
-
-- 100 transactions Mongodb
-python3 performance.py action=transaction_mongodb num_transactions=100 mcommit=false
-
-python3 performance.py action=transaction_mongodb num_transactions=1 mcommit=true
-
-- 100 Transactions Postgres
-python3 performance.py action=transaction_postgres num_transactions=100
-
-# --------------- Queries ----------------- #
-python3 performance.py action=get_claims_sql query=claim patient_id=M-2030005 iters=100
-python3 performance.py action=get_claims_sql query=claimLinePayments patient_id=M-2030005 iters=100
-python3 performance.py action=get_claims_sql query=claimMemberProvider patient_id=M-2030005 iters=100
-
-python3 performance.py action=get_claims_mongodb query=claim patient_id=M-2000071 iters=100
-python3 performance.py action=get_claims_mongodb query=claimMemberProvider patient_id=M-2000071 iters=100
-# -----  API Emulation ---------------- #
-- SQL
-python3 performance.py action=get_claim_api_sql claim_id=C-2030009 iters=10
-- MongoDB
-python3 performance.py action=get_claim_api claim_id=C-1000009 iters=10
-
-# ---------------------------------------------------------------------- #
-#             Spanner Demo
-# 7/2/24
-python3 performance.py action=get_claims_mongodb query=claim patient_id=M-2009050 iters=10 inc=10
-python3 performance.py action=get_claims_mongodb query=claimMemberProvider patient_id=M-2009050 iters=10 inc=10
-python3 performance.py action=get_claims_sql query=claim patient_id=M-2016016 iters=10 inc=10 
-python3 performance.py action=get_claims_sql query=claimLinePayments patient_id=M-2016016 iters=10 inc=10
-python3 performance.py action=get_claims_sql query=claimMemberProvider patient_id=M-2016016 iters=10 inc=10
-
-
-
-# ---------------------------------- 
-elapsed = datetime.datetime.now() - start
-    logging.debug(f"query took: {elapsed.microseconds / 1000} ms")
-
-    https://teams.microsoft.com/l/meetup-join/19:meeting_ZGE4YzdiOGYtYTYzMS00NTU4LTg0ZWMtMjhmYzRkZWNkYWUx@thread.v2/0?context=%7B%22Tid%22:%22c96563a8-841b-4ef9-af16-33548de0c958%22,%22Oid%22:%2250c3494c-896c-4fb0-940d-77bfca783190%22%7D
-
-    https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZGE4YzdiOGYtYTYzMS00NTU4LTg0ZWM[…]2c%22Oid%22%3a%2250c3494c-896c-4fb0-940d-77bfca783190%22%7d
-
-
-# ----------------- Claim Query --------------------------- #
+Claim joined with claimlines and diagnosiscode
+```sql
 select c.*, cl.adjudicationdate, cl.attendingprovider_id, cl.placeofservice, cl.procedurecode, cl.quantity, cl.servicefromdate, cl.serviceenddate, cp.approvedamount, cp.coinsuranceamount, cp.copayamount, cp.paidamount, cp.paiddate,
 cp.patientpaidamount, cp.payerpaidamount, cp.modified_at as last_payment_activity, cd.code as diagnosis from claim c
     LEFT OUTER JOIN claim_claimline cl on cl.claim_id = c.claim_id
     LEFT JOIN claim_payment cp on cp.claim_id = c.claim_id
     LEFT JOIN claim_diagnosiscode cd on cd.claim_id = c.claim_id
 WHERE c.claim_id = 'C-2003017'
+```
 
-# -------------------- Transaction MongoDB ----------------------------- #
+###  Transaction in MongoDB ###
+```python
 with client.start_session() as session:
     logging.debug(f"Transaction started for claim {claim_id}")
     with session.start_transaction():
@@ -515,8 +218,10 @@ with client.start_session() as session:
             {"$inc": {"total_payments": payment[i]["PatientPaidAmount"]}},
             session=session)
         session.commit_transaction()
+```
 
-# -------------------- Transaction Postgres ----------------------------- #
+###  Transaction in Postgres ###
+```python
 cur = conn.cursor()
 SQL_INSERT = (
     f"INSERT INTO claim_payment(claim_payment_id, claim_id, approvedamount, coinsuranceamount, copayamount, latepaymentinterest, paidamount, paiddate, patientpaidamount, patientresponsibilityamount, payerpaidamount, modified_at)"
@@ -546,12 +251,5 @@ SQL_TRANSACTION = (
     f"{SQL_UPDATE_MEMBER} "
     f"COMMIT;"
 )
+```
 
-# ------------- Form Transaction Example --------------------- #
-Claim Status
-Claim Note
-Claim Diagnosis Code
-Payment
-Member Name
-Member Address
-Member Communication
