@@ -1,0 +1,10 @@
+pymongo
+psycopg2
+itertools
+deepmerge
+import UpdateMany
+from faker import Faker
+import pymongo
+import psycopg2
+import itertools
+from deepmerge import Merger

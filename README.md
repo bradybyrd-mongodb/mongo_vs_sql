@@ -1,5 +1,117 @@
 # -------------------------------------------------------#
-#  Relational Replace Demo
+#  Relational Comparison Demo
+This collection of scripts highlight differences working with the same data set in Postgres and MongoDB.  The comparisons include data generation, query performance, code complexity and transactions.  There is also a comparison of serving a json payload to an API - the most common application use case.
+
+
+# ------------------------------------------------------ #
+## Environment Setup ##
+The scripts will run in Python 3.9 and above
+pip install -r requirements.txt
+
+
+- Data loading
+Data can be built in both Postgres and MongoDB using the same configuration files.  Samples are contained in the model-tables folder.  The files are csv format for simplicity.  Here is an example:
+
+```csv
+Resource.Property,Property Type,Generator
+Member.member_id,String,"IDGEN.get(""M-"")"
+Member.lastName,String,fake.last_name()
+Member.dateOfBirth,date,"fake.past_datetime() - datetime.timedelta(365*20)"
+Member.gender,String,"fake.random_element(('Male', 'Female', 'Other'))"
+Member.Address().name,String,"fake.random_element(('Main', 'Summer', 'Old'))"
+Member.Address().addressLine1,String,fake.street_address()
+```
+
+- In MongoDB this will create a collection with member_id, lastName, dateOfBirth and gender fields.  It will create an array of subdocuments for Address consisting of name and addressLine1.  The data generators for each invoke the Faker library to generate random data.  In order to preserve relational integrity, the system uses a method called IDGEN which will create and track ids based on the passed prefix ("M-" above).
+- In Postgres the dotted depth of the property will create a system of related tables (max-depth = 5).  Thus, the above will create a Member table with 4 fields, then create a Member_Address table with the two defined fields + 2 id fields for relational joins: member_id and member_address_id, these will be automatically populated with the ids to connect the two tables.
+- You can sepcify the number of subdocuments created by entering a number in the parenthesis like this:
+Member.Address(12)
+
+### Configuration:###
+Most properties are controlled by the relations_setting.json file.  This needs to be modified for your needs.  Here are a few of the key settings:
+```json
+{
+  "version": "2.0",
+  "process_count": 3,
+  "batch_size": 1000,
+  "batches": 10,
+  "base_counter": 4000000,
+  "mongodb": {
+    "uri": "mongodb+srv://claims-demo.vmwqj.mongodb.net",
+    "database": "healthcare_test",
+    "collection": "member",
+    "username": "main_admin",
+    "password": "<secret>" 
+  },
+  "postgres": {
+    "host": "34.172.34.239",
+    "username": "postgres",
+    "password": "<secret>",
+    "database": "healthcare",
+    "notes": "GCP CloudSQL Database"
+  },
+  "data": {
+    "provider": {
+      "path": "model-tables/provider.csv",
+      "size": 2000,
+      "id_prefix": "P-"
+    },
+    "member": {
+      "path": "model-tables/member.csv",
+      "size": 10000,
+      "id_prefix": "M-"
+    },
+    "claim": {
+      "path": "model-tables/claim.csv",
+      "size": 50000,
+      "id_prefix": "C-"
+    }
+  }
+}
+```
+
+### Database Connections:###
+
+ For each database connection, enter the parameters in the section.  The collection parameter will be ignored in the mongodb section unless you are running some utility method.  Note that the password is masked here.  It will use a password if you enter one, however, that is not very secure.  If it says <secret>, the script will look for the environment variable _PWD_ for mongodb and _PGPWD_ for postgres.
+
+### Data Volume:###
+
+ Several parameters govern the amount of data generated.  The loader uses a bulk load and the "batch_size" works with that.  In the absence of a specific size parameter in the settings file or command line, the script will use the "batches" parameter to build that data.  Additionally, the process count determines the number of threads in the loader.  You can also setup a group of files to load using the "data" parameter, this eliminates the need to define things on the command line. As an example, this will load the provider/member/claim system:
+```bash
+python3 load_sql.py action=load_data #(Postgres)
+python3 load_mongo.py action=load_data #(MongoDB)
+```
+
+The script will use the "data" parameter which will create this much data in:
+  - Provider - 2000 * 3 = 6,000, 2000/1000 = 2 batches/process thread
+  - Member - 10000 * 3 = 30,000, 10000/1000 = 10 batches/process thread
+  - Claim - 50000 * 3 = 150,000, 50000/1000 = 50 batches/process thread
+
+*Note that on the sql side many more tables will be created to support the rich document depth.  In the absence of a scale parameter in the csv file, the engine will assign a number between 1-5.  Thus 1000's more records are produced in sql.
+
+This will load the just the member.csv data:
+```bash
+python3 load_sql.py action=load_data template=model-tables/member.csv #(Postgres)
+python3 load_mongo.py action=load_data template=model-tables/member.csv #(MongoDB)
+```
+
+The script will use the "batch size" and "batches" parameters which will create this much data:
+  - Member - 1000 * 10 * 3 = 30,000, in 10 batches/process thread
+In mongoDB, the "version" parameter will add a field called version with that value
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # -------------------------------------------------------#
 #  9/30/24 Side by Side comparison
@@ -10,10 +122,6 @@ proceeds, we should see mongodb jump way out in front.
 SETTING: An established Postgres application is getting a 2.0 upgrade
 The upgrade involves considerable refactoring of data as well as new development
 The application
-
-
-
-
 
 
 Common Relational Use Cases
@@ -88,12 +196,10 @@ Common Relational Use Cases
         - inventory
         - next_date
 
-
-ssh -i ../../../servers/bradybyrd_mdb_key.pem ec2-user@34.207.253.18
-
 # ----------------------------------------------------------#
-#  Queries
-# 7/13/22
+#  SQL Queries
+# 8/5/22
+
 select m.firstname, m.lastname, m.member_id, m.gender, ma.city, ma.state
 from member m
 left join (select member_id, city, state from member_address where member_id IN ('M-1000007','M-1000008','M-1000009','M-1000010') and name = 'Main') ma on ma.member_id = m.member_id
@@ -118,11 +224,7 @@ LEFT JOIN (select member_id, usage, language from member_languages where member_
 LEFT JOIN (select member_id, employeeidentificationnumber from member_employment where member_id IN ('M-1000007','M-1000008','M-1000009','M-1000010') limit 1) me on me.member_id = m.member_id
 WHERE c.patient_id IN ('M-1000007','M-1000008','M-1000009','M-1000010')
 
-
 # ----------------------------------------------------------#
-#  Queries
-# 8/5/22
-
 # Show a claim:
 select c.*, m.firstname, m.lastname, m.dateofbirth, m.gender, cl.*, ap.firstname as ap_first, ap.lastname as ap_last, ap.gender as ap_gender, ap.dateofbirth as ap_birthdate, 
   op.firstname as op_first, op.lastname as op_last, op.gender as op_gender, op.dateofbirth as op_birthdate, 
@@ -139,37 +241,9 @@ select c.*, m.firstname, m.lastname, m.dateofbirth, m.gender, cl.*, ap.firstname
 
 db.claim.findOne({patient_id: "M-1000567"})
 
-
 db.claim.find({age: {$gt: 41}})
 
 {patient_id : {$in : ['M-1000004','M-1000005','M-1000006','M-1000095','M-1000105']}}
-
-
-API:
-fmlumlcq/eb9329b9-65c4-429f-9b4e-e35c8ad71914
-curl --request POST \
-  'https://data.mongodb-api.com/app/data-amafk/endpoint/data/v1/action/find' \
-  --header 'Content-Type: application/json' \
-  --header 'api-key: TpqAKQgvhZE4r6AOzpVydJ9a3tB1BLMrgDzLlBLbihKNDzSJWTAHMVbsMoIOpnM6' \
-  --data-raw '{
-      "dataSource": "Cluster0",
-      "database": "learn-data-api",
-      "collection": "hello",
-      "document": {
-        "text": "Hello from the Data API!",
-      }
-  }'
-
-  curl --location --request POST 'https://data.mongodb-api.com/app/data-amafk/endpoint/data/v1/action/findOne' \
---header 'Content-Type: application/json' \
---header 'Access-Control-Request-Headers: *' \
---header 'api-key: 621682fc4f4fa6e363ddd392' \
---data-raw '{
-    "collection":"claim",
-    "database":"healthcare",
-    "dataSource":"M10BasicAgain",
-    "projection": {"_id": 1}
-}'
 
 # ----------------------------------------------------------#
 #  Presciption Model

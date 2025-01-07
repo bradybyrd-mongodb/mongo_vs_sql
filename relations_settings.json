@@ -4,11 +4,8 @@
   "batch_size": 1000,
   "batches": 10,
   "base_counter": 4000000,
-  "gcp_project_id": "bradybyrd-poc",
-  "gcp_dataset": "bbwarehouse",
   "mongodb": {
     "uri": "mongodb+srv://claims-demo.vmwqj.mongodb.net",
-    "urin" : "mongodb+srv://bbdemo.vmwqj.mongodb.net",
     "database": "healthcare_test",
     "collection": "member",
     "username": "main_admin",
@@ -21,13 +18,6 @@
     "database": "healthcare",
     "notes": "GCP CloudSQL Database"
   },
-  "spanner": {
-    "host": "34.172.34.239",
-    "database_name": "healthcare",
-    "database_id": "healthcare",
-    "instance_id" : "bb-spanner-poc",
-    "notes": "GCP Spanner Database"
-  },
   "data": {
     "provider": {
       "path": "model-tables/provider.csv",
@@ -37,37 +27,12 @@
     "member": {
       "path": "model-tables/member.csv",
       "size": 10000,
-      "id_prefix": "M-",
-      "thumbnail": [{
-        "name": "recentClaims",
-        "coll": "claim",
-        "type": "many",
-        "query": "{}",
-        "find_query": "{\"patient_id\" : doc[\"member_id\"]}",
-        "fields": ["claim_id", "claimType", "claimStatus", "serviceEndDate", "attendingProvider_id", "placeOfService"]
-      }]
+      "id_prefix": "M-"
     },
     "claim": {
       "path": "model-tables/claim.csv",
       "size": 50000,
-      "id_prefix": "C-",
-      "thumbnail": [{
-          "name": "attendingProvider",
-          "coll": "provider",
-          "type": "one",
-          "query": "{}",
-          "find_query": "{\"provider_id\" : doc[\"attendingProvider_id\"]}",
-          "fields": ["lastName", "firstName", "dateOfBirth", "gender", "nationalProviderIdentifier"]
-        },
-        {
-          "name": "patientMember",
-          "coll": "member",
-          "type": "one",
-          "query": "{}",
-          "find_query": "{\"member_id\" : doc[\"patient_id\"]}",
-          "fields": ["lastName", "firstName", "dateOfBirth", "gender", "Communication.0.phoneNumber"]
-        }
-      ]
+      "id_prefix": "C-"
     }
   }
 }

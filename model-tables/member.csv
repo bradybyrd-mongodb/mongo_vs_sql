@@ -1,5 +1,5 @@
 Resource.Property,Property Type,Generator
-Member.member_id,String,"IDGEN.get(""M-"")","""M-"" + Incremental 1- 65 million"
+Member.member_id,String,"IDGEN.get(""M-"")"
 Member.lastName,String,fake.last_name()
 Member.firstName,String,fake.first_name()
 Member.middleName,String,fake.first_name()
