@@ -134,7 +134,7 @@ order by c.claim_id
 This produces a grid nearly 250 columns wide with nearly 100 rows per claim.
 
 Here is the equivalent query in mongoDB:
-```json
+```python
 db.claim.findOne({claim_id: "C-2100000"})
 ```
 This produces a single hierarchical json document that nayone can read.
