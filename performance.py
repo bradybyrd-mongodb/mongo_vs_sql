@@ -38,6 +38,7 @@ Demo instructions in: transaction_demoscript.md
 
 '''
 def generate_payments(num):
+    # member.name also isd in claim
     payments = [None] * num
     for i in range(0, num):
         payments[i] = {}
@@ -94,6 +95,7 @@ def get_claims_sql(conn, query, patient_id, r, skip_cache, iters = 1):
     cache_hit = False
     pair = patient_id.split("-")
     idnum = int(pair[1])
+    bb.logit("# ---------------- PostgreSQL Performance ----------------- #")
     for inc in range(iters):
         patient_id = f'{pair[0]}-{idnum}'
         instart = datetime.datetime.now()
