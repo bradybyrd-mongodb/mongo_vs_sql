@@ -3,6 +3,11 @@ This collection of scripts highlight differences working with the same data set 
 
 
 ## Environment Setup ##
+For a standard GCP Debian instance, run this shell script:
+```bash
+sudo ./env_setup_deb.sh
+```
+
 The scripts will run in Python 3.9 and above.  Load the python libs with this:
 ```bash
 pip install -r requirements.txt

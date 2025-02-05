@@ -89,8 +89,30 @@ def ddl_from_template(template, domain):
         first = False
     clean_ddl(tables)
     bb.logit("Table DDL:")
-    pprint.pprint(tables)
+    #pprint.pprint(tables)
+    jsonable_print(tables)
     return tables
+
+def jsonable_print(json_var):
+    output = pprint.pformat(json_var)
+    new_out = ""
+    increate = False
+    for line in output.splitlines():
+        if "fields':" in line:
+            increate = False
+            new_out += line + "\n"
+        elif "CREATE TABLE" in line:
+            new_out += line.replace("'CREATE","('CREATE") + "\n"
+            increate = True
+        elif increate and ")'," in line:
+            new_out += line.replace(")'",")')") + "\n"
+        elif  "insert into" in line:
+            new_out += line.replace("'insert into","('insert into") + "\n"
+        elif "%s);" in line:
+            new_out += line.replace("%s);'","%s);')") + "\n"
+        else:
+            new_out += line + "\n"
+    print(new_out)
 
 def master_from_file(file_name):
     return file_name.split("/")[-1].split(".")[0]
@@ -103,7 +125,10 @@ def clean_field_data(data):
         len(tab.split("_")) == 2 and tab.split("_")[0] == tab.split("_")[1]
     ):  # "catch doubled eg member_member"
         tab = tab.split("_")[0]
-    return tab, data["name"], data["type"]
+    return lowercase_first_letter(tab), data["name"], data["type"]
+
+def lowercase_first_letter(string):
+  return string[0].lower() + string[1:]
 
 def clean_ddl(tables_obj):
     for tab in tables_obj:
