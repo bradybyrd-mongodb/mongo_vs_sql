@@ -3,15 +3,28 @@ This collection of scripts highlight differences working with the same data set 
 
 
 ## Environment Setup ##
-For a standard GCP Debian instance, run this shell script:
+Standard GCP Debian instance, from an ssh terminal (with sudo rights)
 ```bash
+$> vi env_setup.sh
+Inside vi:
+i (for insert)
+- now copy the contents of the env_setup_deb.sh file and paste it into the vi prompt
+esc + : + wq to save
+$> chmod 755 env_setup.sh
 sudo ./env_setup_deb.sh
 ```
+The script will install a few components and end with a message like this:
+`# -------------------- INFO --------------------------- #
+  Remember to set an environment variable for your passwords
+  export _PWD_=<my mongodb password>
+  export _PGPWD_=<my postgres password>`
 
-The scripts will run in Python 3.9 and above.  Load the python libs with this:
+Change into the mongo_vs_sql directory, invoke the venv and you are ready to go:
 ```bash
-pip install -r requirements.txt
+$> cd mongo_vs_sql
+$> source .venv/bin/activate
 ```
+Now you can run any of the python commands.  Note - each time you ssh into your machine, you will need to source the venv environment and export the password environment variable
 
 ### Postgres Schema Creation: ###
 Unlike mongoDB, relational databases need a predefined schema for data to land in. The load_sql.py script can create the DDL statements for postgres from the csv files.  Here are a few command to illustrate the process.

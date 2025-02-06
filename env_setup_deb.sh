@@ -20,4 +20,3 @@ echo "# -------------------- INFO --------------------------- #"
 echo "  Remember to set an environment variable for your passwords"
 echo "  export _PWD_=<my mongodb password>"
 echo "  export _PGPWD_=<my postgres password>"
-cd mongo_vs_sql
