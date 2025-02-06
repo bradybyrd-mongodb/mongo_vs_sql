@@ -12,7 +12,7 @@ from random import randint
 import random
 import pprint
 import pymongo
-import psycopg2
+import psycopg
 #import redis
 from bson.json_util import dumps
 from bson.objectid import ObjectId
@@ -59,7 +59,7 @@ def sql_execute(sql):
     cur = conn.cursor()
     try:
         sql = cur.execute(sql)
-    except psycopg2.DatabaseError as err:
+    except psycopg.DatabaseError as err:
         print(f"{sql} - {err}")
     cur.close()
 
@@ -649,7 +649,7 @@ def column_names(table, conn):
         cur.execute(sql)
         row_count = cur.rowcount
         #print(f"{row_count} columns")
-    except psycopg2.DatabaseError as err:
+    except psycopg.DatabaseError as err:
         print(f"{sql} - {err}")
     rows = cur.fetchall()
     result = []
@@ -672,7 +672,7 @@ def pg_connection(type="postgres", sdb="none"):
         spwd = os.environ.get("_PGPWD_")
     if sdb == "none":
         sdb = settings[type]["database"]
-    conn = psycopg2.connect(host=shost, database=sdb,
+    conn = psycopg.connect(host=shost, dbname=sdb,
                             user=susername, password=spwd)
     return conn
 
@@ -713,7 +713,7 @@ def postgres_query(conn, sql):
         rows = cur.fetchall()
         result = {"num_records": row_count, "data": rows}
         return result
-    except psycopg2.DatabaseError as err:
+    except psycopg.DatabaseError as err:
         print(f"{sql} - {err}")
     cur.close()
 

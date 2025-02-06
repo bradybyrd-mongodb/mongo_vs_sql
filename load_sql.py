@@ -20,7 +20,7 @@ import process_csv_model as csvmod
 from bbutil import Util
 from id_generator import Id_generator
 from pymongo import MongoClient
-import psycopg2
+import psycopg as psycopg
 from faker import Faker
 import itertools
 from deepmerge import Merger
@@ -308,7 +308,7 @@ def create_foreign_keys():
                 print(fkey_sql)
                 cur2.execute(fkey_sql)
                 pgconn.commit()
-        except psycopg2.DatabaseError as err:
+        except psycopg.DatabaseError as err:
             bb.logit(f"{err}", "ERROR")
             pgconn.commit()
             # cur2.close()
@@ -362,7 +362,7 @@ def fix_provider_ids():
             # print(sql)
             cur2.execute(sql)
             mycon.commit()
-    except psycopg2.DatabaseError as err:
+    except psycopg.DatabaseError as err:
         bb.logit(f"{err}")
     cur.close()
     mycon.close
@@ -385,7 +385,7 @@ def add_primary_provider_ids():
             bb.logit(f"Update: {item[1]}")
             update_cur.execute(sql)
             mycon.commit()
-    except psycopg2.DatabaseError as err:
+    except psycopg.DatabaseError as err:
         bb.logit(f"{err}")
     cur.close()
     mycon.close
@@ -412,7 +412,7 @@ def fix_member_guardian_ids():
             update_cur.execute(sql)
             mycon.commit()
             cnt += 1
-    except psycopg2.DatabaseError as err:
+    except psycopg.DatabaseError as err:
         bb.logit(f"{err}")
     cur.close()
     mycon.close
@@ -550,7 +550,7 @@ def record_loader(tables, table, recs, nconn=False):
         cur.executemany(sql, vals)
         conn.commit()
         bb.logit(f"{cur.rowcount} inserted")
-    except psycopg2.DatabaseError as err:
+    except psycopg.DatabaseError as err:
         bb.logit(f"{table} - {err}")
     cur.close()
     if not nconn:
@@ -567,7 +567,7 @@ def sql_query(database, sql, nconn=False):
     try:
         cur.execute(sql)
         bb.logit(f"{cur.rowcount} records")
-    except psycopg2.DatabaseError as err:
+    except psycopg.DatabaseError as err:
         bb.logit(f"{sql} - {err}")
     result = cur.fetchall()
     cur.close()
@@ -596,7 +596,7 @@ def sql_query(sql, conn):
         cur.execute(sql)
         row_count = cur.rowcount
         print(f"{row_count} records")
-    except psycopg2.DatabaseError as err:
+    except psycopg.DatabaseError as err:
         print(f"{sql} - {err}")
     result = {"num_records": row_count, "data": cur.fetchall()}
     cur.close()
@@ -610,7 +610,7 @@ def column_names(table, conn):
         cur.execute(sql)
         row_count = cur.rowcount
         print(f"{row_count} columns")
-    except psycopg2.DatabaseError as err:
+    except psycopg.DatabaseError as err:
         print(f"{sql} - {err}")
     rows = cur.fetchall()
     result = []
@@ -639,7 +639,7 @@ def sql_action(conn, action, tables):
             bb.logit(f"Action: {action} {table_name}")
             print(sql)
             cursor.execute(sql)
-        except psycopg2.DatabaseError as err:
+        except psycopg.DatabaseError as err:
             bb.logit(pprint.pformat(err))
             print(sql)
             conn.commit()
@@ -672,7 +672,7 @@ def pg_connection(type="postgres", sdb="none"):
         spwd = os.environ.get("_PGPWD_")
     if sdb == "none":
         sdb = settings[type]["database"]
-    conn = psycopg2.connect(host=shost, database=sdb, user=susername, password=spwd)
+    conn = psycopg.connect(host=shost, dbname=sdb, user=susername, password=spwd)
     return conn
 
 # ------------------------------------------------------------------#
