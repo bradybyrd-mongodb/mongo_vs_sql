@@ -674,6 +674,7 @@ def pg_connection(type="postgres", sdb="none"):
         sdb = settings[type]["database"]
     conn = psycopg.connect(host=shost, dbname=sdb,
                             user=susername, password=spwd)
+    bb.logit(f'Connecting-postgres: postgresql://********:********@{shost}:5432/{sdb}')
     return conn
 
 def redis_connection(type="redis_local"):
@@ -691,7 +692,7 @@ def mongodb_connection(type="uri", details={}):
     if "secret" in password:
         password = os.environ.get("_PWD_")
     mdb_conn = mdb_conn.replace("//", f"//{username}:{password}@")
-    bb.logit(f"Connecting: {mdb_conn}")
+    bb.logit(f'Connecting-mongodb: {mdb_conn.replace(username,"********").replace(password,"*********")}')
     if "readPreference" in details:
         client = MongoClient(
             mdb_conn, readPreference=details["readPreference"]

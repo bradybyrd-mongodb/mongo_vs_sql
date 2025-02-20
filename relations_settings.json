@@ -6,7 +6,7 @@
   "base_counter": 4000000,
   "mongodb": {
     "uri": "mongodb+srv://claims-demo.vmwqj.mongodb.net",
-    "database": "healthcare_test",
+    "database": "healthcare_new",
     "collection": "member",
     "username": "main_admin",
     "password": "<secret>" 
