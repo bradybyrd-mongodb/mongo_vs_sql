@@ -158,9 +158,12 @@ def get_claims_mongodb(client, query, patient_id, iters = 1):
     last_result = {}
     start = datetime.datetime.now()
     pair = patient_id.split("-")
+    iters += 1 #discarding first value for stats
     pipe = {}
     idnum = int(pair[1])
     for inc in range(iters):
+        if inc == 1:
+            start = datetime.datetime.now()
         patient_id = f'{pair[0]}-{idnum}'
         instart = datetime.datetime.now()
         if query == "claim":  # Claim - only
@@ -210,7 +213,7 @@ def get_claims_mongodb(client, query, patient_id, iters = 1):
     pprint.pprint(last_result)
     print("# ---------------- Pipeline ---------------------- #")
     pprint.pprint(pipe)
-    timer(start,iters,"tot")
+    timer(start,iters - 1,"tot")
 
 def transaction_mongodb(client, num_payment, manual=False):
     db = settings["database"]
