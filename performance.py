@@ -186,7 +186,7 @@ def get_claims_mongodb(client, query, patient_id, iters = 1):
     pprint.pprint(last_result)
 
 def transaction_mongodb(client, iters, manual=False):
-    db = settings["database"]
+    db = settings["mongodb"]["database"]
     claim = client[db]["claim"]
     member = client[db]["member"]
     iters += 1
@@ -341,7 +341,7 @@ def get_claim_api_sql(conn, claim_id, add_member = False):
     iters = 1
     if "iters" in ARGS:
         iters = int(ARGS["iters"])
-    iter += 1
+    iters += 1
     base_id = int(claim_id.replace("C-",""))
     start = datetime.datetime.now()
     rich = ""
