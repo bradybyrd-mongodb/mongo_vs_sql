@@ -66,6 +66,7 @@ def get_claims_sql(conn, query, patient_id, iters = 1):
     start = datetime.datetime.now()
     SQL = ""
     query_result = None
+    last_result = ""
     increment = 1
     if "inc" in ARGS:
         increment = int(ARGS["inc"])
@@ -109,13 +110,16 @@ def get_claims_sql(conn, query, patient_id, iters = 1):
         #bb.logit(f"found {num_results} records")
         cnt = 0
         for data in query_result["data"]:
-            # print(result)
+            last_result = data
             cnt += 1
-        timer(instart, cnt)
+        if inc > 0:
+            timer(instart, cnt)
         idnum += increment
+    timer(start,iters - 1,"tot")
     bb.logit("# --------------------- SQL --------------------------- #")
     bb.logit(SQL)
-    timer(start,iters - 1,"tot")
+    print("# ---------------- Sample Document ---------------------- #")
+    pprint.pprint(last_result)
 
 def get_claims_mongodb(client, query, patient_id, iters = 1):
     claim = client["claim"]
@@ -172,32 +176,37 @@ def get_claims_mongodb(client, query, patient_id, iters = 1):
             #pprint.pprint(data)
             last_result = data
             cnt += 1
-        timer(instart,cnt)
+        if inc > 0:
+            timer(instart,cnt)
         idnum += 1
-    print("# ---------------- Sample Document ---------------------- #")
-    pprint.pprint(last_result)
+    timer(start,iters - 1,"tot")
     print("# ---------------- Pipeline ---------------------- #")
     pprint.pprint(pipe)
-    timer(start,iters - 1,"tot")
+    print("# ---------------- Sample Document ---------------------- #")
+    pprint.pprint(last_result)
 
-def transaction_mongodb(client, num_payment, manual=False):
+def transaction_mongodb(client, iters, manual=False):
     db = settings["database"]
     claim = client[db]["claim"]
     member = client[db]["member"]
-    payment = generate_payments(num_payment)
-    pipe = [{"$sample": {"size": num_payment}},
+    iters += 1
+    payment = generate_payments(iters)
+    pipe = [{"$sample": {"size": iters}},
             {"$project": {"claim_id": 1, "_id": 0}}]
     claim_ids = list(claim.aggregate(pipe))
     elapsed_transactions = 0
-    for i in range(0, num_payment):
-        claim_id = claim_ids[i]["claim_id"]
+    for inc in range(0, iters):
+        if inc == 1:
+            start = datetime.datetime.now()
+        instart = datetime.datetime.now()
+        claim_id = claim_ids[inc]["claim_id"]
         with client.start_session() as session:
             start = datetime.datetime.now()
             bb.logit(f"Transaction started for claim {claim_id}")
             with session.start_transaction():
                 claim_update = claim.find_one_and_update(
                     {"claim_id": claim_id},
-                    {"$addToSet": {"payment": payment[i]}},
+                    {"$addToSet": {"payment": payment[inc]}},
                     projection={"patient_id": 1, "payment" : 1},
                     session=session,
                 )
@@ -224,33 +233,35 @@ def transaction_mongodb(client, num_payment, manual=False):
                         raise Exception("Operation aborted")
                 # switch to abort transaction.
                 session.commit_transaction()
-                elapsed = datetime.datetime.now() - start
-                bb.logit(
-                    f"Transaction took: {'{:.3f}'.format(elapsed.microseconds / 1000)} ms")
+                if inc > 0:
+                    timer(instart,1)
+                #elapsed = datetime.datetime.now() - start
+                #bb.logit(
+                #   f"Transaction took: {'{:.3f}'.format(elapsed.microseconds / 1000)} ms")
                 bb.logit(f"Transaction completed")
-                elapsed_transactions += elapsed.microseconds
-    bb.logit(
-        f"Transaction average time took for {num_payment} transactions: {'{:.3f}'.format(elapsed_transactions / (num_payment * 1000))} ms"
-    )
+                #elapsed_transactions += elapsed.microseconds
+    #bb.logit(
+    #    f"Transaction average time took for {iters - 1} transactions: {'{:.3f}'.format(elapsed_transactions / ((iters - 1) * 1000))} ms"
+    #)
+    timer(start,iters - 1,"tot")
     bb.logit(f"Test completed")
 
-
-# add mongodb query performance
-
-
-def transaction_postgres(conn, num_payment):
-    payment = generate_payments(num_payment)
+def transaction_postgres(conn, iters):
+    iters += 1
+    payment = generate_payments(iters)
     conn.autocommit = False #for multi-line transactions
-    cur = conn.cursor()
-
+    cur = conn.cursor()    
     SQL_RANDOM = "select claim_id from claim order by random() limit {};".format(
-        num_payment
+        iters
     )
     claim_ids = sql_query(SQL_RANDOM, conn)
     elapsed_transactions = 0
-    for i in range(0, num_payment):
-        start = datetime.datetime.now()
-        claim_id = claim_ids["data"][i][0]
+    start = datetime.datetime.now()
+    for inc in range(0, iters):
+        if inc == 1:
+            start = datetime.datetime.now()
+        instart = datetime.datetime.now()
+        claim_id = claim_ids["data"][inc][0]
         bb.logit(f"SQL Transaction started for claim {claim_id}")
         pmt = {
             "claim_id": claim_id,
@@ -272,7 +283,7 @@ def transaction_postgres(conn, num_payment):
         # claim payment + insert new payment claim
         SQL_INSERT = (
             f"INSERT INTO claim_payment(claim_payment_id, claim_id, approvedamount, coinsuranceamount, copayamount, latepaymentinterest, paidamount, paiddate, patientpaidamount, patientresponsibilityamount, payerpaidamount, modified_at)"
-            f"VALUES ('{pmt['claim_payment_id']}', '{pmt['claim_id']}', {payment[i]['approvedAmount']}, {payment[i]['coinsuranceAmount']}, {payment[i]['copayAmount']}, {payment[i]['latepaymentInterest']}, {payment[i]['paidAmount']}, '{payment[i]['paidDate']}', {payment[i]['patientPaidAmount']}, {payment[i]['patientResponsibilityAmount']}, {payment[i]['payerPaidAmount']}, now() );"
+            f"VALUES ('{pmt['claim_payment_id']}', '{pmt['claim_id']}', {payment[inc]['approvedAmount']}, {payment[inc]['coinsuranceAmount']}, {payment[inc]['copayAmount']}, {payment[inc]['latepaymentInterest']}, {payment[inc]['paidAmount']}, '{payment[inc]['paidDate']}', {payment[inc]['patientPaidAmount']}, {payment[inc]['patientResponsibilityAmount']}, {payment[inc]['payerPaidAmount']}, now() );"
         )
         cur.execute(SQL_INSERT)
         # claim + update total payment claim
@@ -307,14 +318,15 @@ def transaction_postgres(conn, num_payment):
         cur.execute(SQL_UPDATE_MEMBER)
         
         conn.commit()
-
-        elapsed = datetime.datetime.now() - start
-        bb.logit(f"Transaction took: {'{:.3f}'.format(elapsed.microseconds / 1000)} ms")
+        if inc > 0:
+            timer(instart,1)
+        
+        #elapsed = datetime.datetime.now() - start
+        #bb.logit(f"Transaction took: {'{:.3f}'.format(elapsed.microseconds / 1000)} ms")
         bb.logit(f"Transaction completed")
-        elapsed_transactions += elapsed.microseconds
-    bb.logit(
-        f"Transaction average time took for {num_payment} transactions: {'{:.3f}'.format(elapsed_transactions / (num_payment * 1000))} ms"
-    )
+        #elapsed_transactions += elapsed.microseconds
+    #bb.logit(f"Transaction average time took for {iters} transactions: {'{:.3f}'.format(elapsed_transactions / (iters * 1000))} ms")
+    timer(start,iters - 1,"tot")
     bb.logit(f"Test completed")
 
 # --------------------------------------------------------- #
@@ -329,15 +341,18 @@ def get_claim_api_sql(conn, claim_id, add_member = False):
     iters = 1
     if "iters" in ARGS:
         iters = int(ARGS["iters"])
+    iter += 1
     base_id = int(claim_id.replace("C-",""))
-    start_time = datetime.datetime.now()
+    start = datetime.datetime.now()
     rich = ""
     if add_member:
         rich = "Rich "
     bb.message_box(f"{rich}Claim API - MongoDB","title")
-    for k in range(iters):
+    for inc in range(iters):
+        if inc == 1:
+            start = datetime.datetime.now()
         instart = datetime.datetime.now()
-        new_id = f'C-{base_id + k}'
+        new_id = f'C-{base_id + inc}'
         result = {}
         cursor = conn.cursor()
         tables = ['claim_claimline',
@@ -375,8 +390,10 @@ def get_claim_api_sql(conn, claim_id, add_member = False):
         if add_member:
             member = add_member_info_sql(conn, result["patient_id"])
             result["member_detail"] = member
-        timer(instart)
-    timer(start_time, iters, "tot")
+        if inc > 0:
+            timer(instart)
+    timer(start, iters - 1, "tot")
+    print("# ---------------- Sample Document ---------------------- #")
     pprint.pprint(result)
     
 def jsonize_records(conn, table, results):
@@ -420,17 +437,22 @@ def get_claim_api(client, claim_id):
     iters = 1
     if "iters" in ARGS:
         iters = int(ARGS["iters"])
+    iters += 1
     mongodb = client["healthcare"]
     collection = "claim"
     bb.message_box("Claim API - MongoDB","title")
     base_id = int(claim_id.replace("C-",""))
-    start_time = datetime.datetime.now()
-    for k in range(iters):
+    start = datetime.datetime.now()
+    for inc in range(iters):
+        if inc == 1:
+            start = datetime.datetime.now()
         instart = datetime.datetime.now()
-        new_id = f'C-{base_id + k}'
+        new_id = f'C-{base_id + inc}'
         docs = mongodb[collection].find_one({"Claim_id" : new_id})
-        timer(instart)
-    timer(start_time, iters, "tot")
+        if inc > 0:
+            timer(instart)
+    timer(start, iters - 1, "tot")
+    print("# ---------------- Sample Document ---------------------- #")
     pprint.pprint(docs)
 
 def get_claim_api_rich(client, claim_id):
@@ -593,7 +615,7 @@ def file_info(file_obj, type = "file"):
         doc = {"error" : True}
     return(doc)
 
-def timer(starttime,cnt = 1, ttype = "sub"):
+def timer(starttime,cnt = 1, ttype = "sub", msg = ""):
     elapsed = datetime.datetime.now() - starttime
     secs = elapsed.seconds
     msecs = elapsed.microseconds
@@ -604,10 +626,10 @@ def timer(starttime,cnt = 1, ttype = "sub"):
         elapsed = secs + (msecs * .000001)
         unit = "s"
     if ttype == "sub":
-        bb.logit(f"query ({cnt} recs) took: {'{:.3f}'.format(elapsed)} {unit}")
+        bb.logit(f"query ({cnt} recs) took: {'{:.3f}'.format(elapsed)} {unit} {msg}")
     else:
         bb.logit(f"# --- Complete: query took: {'{:.3f}'.format(elapsed)} {unit} ---- #")
-        bb.logit(f"#   {cnt} items {'{:.3f}'.format((elapsed)/cnt)} {unit} avg")
+        bb.logit(f"#   {cnt} items {'{:.3f}'.format((elapsed)/cnt)} {unit} avg  {msg}")
 
 def column_names(table, conn):
     sql = f"SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name   = '{table}'"
