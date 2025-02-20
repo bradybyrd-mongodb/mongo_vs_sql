@@ -104,15 +104,15 @@ def get_claims_sql(conn, query, patient_id, iters = 1):
                             where c.patient_id = '{}' """.format(
                                                 str(patient_id), str(patient_id)
             )
-            query_result = sql_query(SQL, conn)
-            #num_results = query_result["num_records"]
-            #bb.logit(f"found {num_results} records")
-            cnt = 0
-            for data in query_result["data"]:
-                # print(result)
-                cnt += 1
-            timer(instart, cnt)
-            idnum += increment
+        query_result = sql_query(SQL, conn)
+        #num_results = query_result["num_records"]
+        #bb.logit(f"found {num_results} records")
+        cnt = 0
+        for data in query_result["data"]:
+            # print(result)
+            cnt += 1
+        timer(instart, cnt)
+        idnum += increment
     bb.logit("# --------------------- SQL --------------------------- #")
     bb.logit(SQL)
     timer(start,iters - 1,"tot")
