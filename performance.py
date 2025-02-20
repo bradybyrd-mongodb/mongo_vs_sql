@@ -13,7 +13,6 @@ import random
 import pprint
 import pymongo
 import psycopg
-#import redis
 from bson.json_util import dumps
 from bson.objectid import ObjectId
 from pymongo import MongoClient
@@ -63,82 +62,49 @@ def sql_execute(sql):
         print(f"{sql} - {err}")
     cur.close()
 
-
-def get_claims_redis(r, key):
-    try:
-        r_data = r.get(key)
-        if r_data is not None:
-            r_data = json.loads(r_data)
-        return r_data
-    except Exception as error:
-        bb.logit(f" {error}")
-
-
-def load_claims_redis(r, key, data):
-    try:
-        load_state = r.set(key, json.dumps(data, default=dumps))
-        bb.logit(f"loaded to redis status {load_state}")
-        if load_state is True:
-            bb.logit(f"claim loaded to redis for claim {key}")
-        return load_state
-    except Exception as error:
-        bb.logit(f" {error}")
-
-
-def get_claims_sql(conn, query, patient_id, r, skip_cache, iters = 1):
+def get_claims_sql(conn, query, patient_id, iters = 1):
     start = datetime.datetime.now()
     SQL = ""
     query_result = None
     increment = 1
     if "inc" in ARGS:
         increment = int(ARGS["inc"])
-    cache_hit = False
+    iters += 1 #discarding first value for stats
     pair = patient_id.split("-")
     idnum = int(pair[1])
     bb.logit("# ---------------- PostgreSQL Performance ----------------- #")
     for inc in range(iters):
         patient_id = f'{pair[0]}-{idnum}'
         instart = datetime.datetime.now()
-        if not skip_cache:
-            key = query + ":" + patient_id
-            query_result = get_claims_redis(r, key)
-            if query_result is not None:
-                bb.logit(f"cache hit -> {patient_id}")
-                print(query_result)
-                cache_hit = True
-            else:
-                bb.logit(f"cache miss -> {patient_id}")
-                bb.logit(f"fetching from psql {SQL}")
-        if not cache_hit:            
-            if query == "claim":  # Claim - only
-                SQL = "select *  from claim c where c.patient_id ='{}'".format(str(patient_id))
-            elif query == "claimLinePayments":  # Claim + Claimlines + Claimpayments
-                SQL = "select c.*, cl.*, cp.* from claim c LEFT JOIN claim_payment cp on cp.claim_id = c.claim_id LEFT OUTER JOIN claim_claimline cl on cl.claim_id = c.claim_id where c.patient_id = '{}'".format(
-                    str(patient_id)
-                )
-                # Claim + Member + Provider (and a bunch of the sub tables)
-            elif query == "claimMemberProvider":
-                SQL = """select c.*, m.firstname, m.lastname, m.dateofbirth, m.gender, cl.*, cp.paidamount, cp.paiddate, ap.firstname as ap_first, ap.lastname as ap_last, ap.gender as ap_gender, ap.dateofbirth as ap_birthdate,
-                                op.firstname as op_first, op.lastname as op_last, op.gender as op_gender, op.dateofbirth as op_birthdate,
-                                rp.firstname as rp_first, rp.lastname as rp_last, rp.gender as rp_gender, rp.dateofbirth as rp_birthdate,
-                                opp.firstname as opp_first, opp.lastname as opp_last, opp.gender as opp_gender, opp.dateofbirth as opp_birthdate, ma.city as city, ma.state as us_state,
-                                mc.phonenumber as phone, mc.emailaddress as email
-                                from claim c
-                                INNER JOIN member m on m.member_id = c.patient_id
-                                LEFT OUTER JOIN claim_claimline cl on cl.claim_id = c.claim_id
-                                LEFT JOIN claim_payment cp on cp.claim_id = c.claim_id
-                                INNER JOIN provider ap on cl.attendingprovider_id = ap.provider_id
-                                INNER JOIN provider op on cl.orderingprovider_id = op.provider_id
-                                INNER JOIN provider rp on cl.referringprovider_id = rp.provider_id
-                                INNER JOIN provider opp on cl.operatingprovider_id = opp.provider_id
-                                LEFT JOIN (select * from member_address where type = 'Main' limit 1) ma on ma.member_id = m.member_id
-                                INNER JOIN (select * from member_communication where emailtype = 'Work' and member_id = '{}' limit 1) mc on mc.member_id = m.member_id
-                                where c.patient_id = '{}' """.format(
-                                                    str(patient_id), str(patient_id)
-                )
+        if inc == 1:
+            start = datetime.datetime.now()
+        if query == "claim":  # Claim - only
+            SQL = "select *  from claim c where c.patient_id ='{}'".format(str(patient_id))
+        elif query == "claimLinePayments":  # Claim + Claimlines + Claimpayments
+            SQL = "select c.*, cl.*, cp.* from claim c LEFT JOIN claim_payment cp on cp.claim_id = c.claim_id LEFT OUTER JOIN claim_claimline cl on cl.claim_id = c.claim_id where c.patient_id = '{}'".format(
+                str(patient_id)
+            )
+            # Claim + Member + Provider (and a bunch of the sub tables)
+        elif query == "claimMemberProvider":
+            SQL = """select c.*, m.firstname, m.lastname, m.dateofbirth, m.gender, cl.*, cp.paidamount, cp.paiddate, ap.firstname as ap_first, ap.lastname as ap_last, ap.gender as ap_gender, ap.dateofbirth as ap_birthdate,
+                            op.firstname as op_first, op.lastname as op_last, op.gender as op_gender, op.dateofbirth as op_birthdate,
+                            rp.firstname as rp_first, rp.lastname as rp_last, rp.gender as rp_gender, rp.dateofbirth as rp_birthdate,
+                            opp.firstname as opp_first, opp.lastname as opp_last, opp.gender as opp_gender, opp.dateofbirth as opp_birthdate, ma.city as city, ma.state as us_state,
+                            mc.phonenumber as phone, mc.emailaddress as email
+                            from claim c
+                            INNER JOIN member m on m.member_id = c.patient_id
+                            LEFT OUTER JOIN claim_claimline cl on cl.claim_id = c.claim_id
+                            LEFT JOIN claim_payment cp on cp.claim_id = c.claim_id
+                            INNER JOIN provider ap on cl.attendingprovider_id = ap.provider_id
+                            INNER JOIN provider op on cl.orderingprovider_id = op.provider_id
+                            INNER JOIN provider rp on cl.referringprovider_id = rp.provider_id
+                            INNER JOIN provider opp on cl.operatingprovider_id = opp.provider_id
+                            LEFT JOIN (select * from member_address where type = 'Main' limit 1) ma on ma.member_id = m.member_id
+                            INNER JOIN (select * from member_communication where emailtype = 'Work' and member_id = '{}' limit 1) mc on mc.member_id = m.member_id
+                            where c.patient_id = '{}' """.format(
+                                                str(patient_id), str(patient_id)
+            )
             query_result = sql_query(SQL, conn)
-            if not skip_cache:
-                load_claims_redis(r, key, query_result)
             #num_results = query_result["num_records"]
             #bb.logit(f"found {num_results} records")
             cnt = 0
@@ -147,10 +113,9 @@ def get_claims_sql(conn, query, patient_id, r, skip_cache, iters = 1):
                 cnt += 1
             timer(instart, cnt)
             idnum += increment
-    #bb.logit(f"records fetched from psql")
     bb.logit("# --------------------- SQL --------------------------- #")
     bb.logit(SQL)
-    timer(start,iters,"tot")
+    timer(start,iters - 1,"tot")
 
 def get_claims_mongodb(client, query, patient_id, iters = 1):
     claim = client["claim"]
@@ -680,11 +645,6 @@ def pg_connection(type="postgres", sdb="none"):
     bb.logit(f'Connecting-postgres: postgresql://********:********@{shost}:5432/{sdb}')
     return conn
 
-def redis_connection(type="redis_local"):
-    rhost = settings[type]["host"]
-    #r = redis.Redis(host=rhost, port=6379, db=0)
-    return r
-
 def mongodb_connection(type="uri", details={}):
     mdb_conn = settings["mongodb"][type]
     username = settings["mongodb"]["username"]
@@ -749,29 +709,20 @@ if __name__ == "__main__":
     ARGS = bb.process_args(sys.argv)
     settings = bb.read_json(settings_file)
     id_map = defaultdict(int)
-    r_conn = None
     client = {"empty": True}
     conn = pg_connection()
     #conn = spanner_connection()
-    skip_cache = True
     skip_mongo = False
     iters = 1
     if not skip_mongo:
         client = mongodb_connection()
         mongodb = client[settings["mongodb"]["database"]]
-    if "cache" in ARGS:
-        skip_cache = ARGS["cache"].lower() == 'false'
-    if not skip_cache:
-        r_conn = redis_connection()
     if "iters" in ARGS:
         iters = int(ARGS["iters"])
     if "action" not in ARGS:
         print("Send action= argument")
         sys.exit(1)
     elif ARGS["action"] == "get_claims_sql":
-        if "cache" in ARGS:
-            ARGS["cache"].lower() == 'true'
-            use_cache = True
         if "patient_id" not in ARGS:
             print("Send patient_id= argument e.g: python3 gcp_getclaimlines.py action=get_claims_sql patient_id='M-2030000' query=claim or claimLinePayments or  claimMemberProvider ")
             sys.exit(1)
@@ -779,7 +730,7 @@ if __name__ == "__main__":
             print("Send patient_id= argument e.g: python3 gcp_getclaimlines.py action=get_claims_sql patient_id='M-2030000' query=claim or claimLinePayments or  claimMemberProvider ")
             sys.exit(1)
         else:
-            get_claims_sql(conn, ARGS["query"], ARGS["patient_id"], r_conn, skip_cache, iters)
+            get_claims_sql(conn, ARGS["query"], ARGS["patient_id"], iters)
     elif ARGS["action"] == "get_claims_mongodb":
         get_claims_mongodb(mongodb, ARGS["query"], ARGS["patient_id"], iters)
     elif ARGS["action"] == "db_migrate":
@@ -809,6 +760,4 @@ if __name__ == "__main__":
         print(f'{ARGS["action"]} not found')
 
     conn.close()
-    if not skip_cache:
-        r_conn.close()
     
