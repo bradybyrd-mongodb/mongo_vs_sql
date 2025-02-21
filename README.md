@@ -15,9 +15,11 @@ sudo ./env_setup_deb.sh
 ```
 The script will install a few components and end with a message like this:
 `# -------------------- INFO --------------------------- #
+  $> cd mongo_vs_sql
+  $> source .venv/bin/activate
   Remember to set an environment variable for your passwords
-  export _PWD_=<my mongodb password>
-  export _PGPWD_=<my postgres password>`
+  $> export _PWD_=<my mongodb password>
+  $> export _PGPWD_=<my postgres password>`
 
 Change into the mongo_vs_sql directory, invoke the venv and you are ready to go:
 ```bash

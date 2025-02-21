@@ -66,6 +66,7 @@ def load_sql_data():
     # read settings and echo back
     bb.message_box("Loading Data", "title")
     bb.logit(f"# Settings from: {settings_file}")
+    num_procs = settings["process_count"]
     passed_args = {"ddl_action": "info"}
     if "template" in ARGS:
         template = ARGS["template"]
@@ -75,9 +76,13 @@ def load_sql_data():
     else:
         print("Send template=<pathToTemplate>")
         sys.exit(1)
+    if "size" in ARGS:
+        size = int(ARGS["size"])
+        passed_args["size"] = size
+        if size < settings["batch_size"]:
+            num_procs = 1
     execute_ddl()
     # Spawn processes
-    num_procs = settings["process_count"]
     jobs = []
     inc = 0
     multiprocessing.set_start_method("fork", force=True)
@@ -107,11 +112,17 @@ def worker_load(ipos, args):
     batch_size = settings["batch_size"]
     if "template" in args:
         template = args["template"]
+        size = settings["batches"] * settings["batch_size"]
+        if "size" in args:
+            size = args["size"]
+            if size < settings["batch_size"]:
+                settings["batch_size"] = size
+                settings["batches"] = 1
         master_table = csvmod.master_from_file(template)
         job_info = {
             master_table: {
                 "path": template,
-                "size": settings["batches"] * settings["batch_size"],
+                "size": size,
                 "id_prefix": f"{master_table[0].upper()}-"
             }
             
@@ -128,6 +139,8 @@ def worker_load(ipos, args):
         bb.message_box(domain, "title")
         table_info = csvmod.ddl_from_template(template_file, domain)
         batches = int(details["size"] / batch_size)
+        if batches == 0:
+            batches = 1
         IDGEN.set({"seed": base_counter, "size": count, "prefix": prefix})
         for k in range(batches):
             bb.logit(f"Loading batch: {k} - size: {batch_size}")

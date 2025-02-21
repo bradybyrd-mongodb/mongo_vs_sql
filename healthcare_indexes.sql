@@ -87,3 +87,33 @@ ALTER TABLE ONLY public.provider_medicaid
 -- Name: provider_medicare fky_provider_id; Type: FK CONSTRAINT; Schema: public; Owner: bbadmin
 ALTER TABLE ONLY public.provider_medicare
     ADD CONSTRAINT fky_provider_id FOREIGN KEY (provider_id) REFERENCES public.provider(provider_id) NOT VALID;
+-- BJB 2/29/25 Policy
+ALTER TABLE IF EXISTS public.policy
+    ADD CONSTRAINT policy_pkey_id UNIQUE (policy_id);
+ALTER TABLE IF EXISTS public.product
+    ADD CONSTRAINT product_pkey_id UNIQUE (product_id);
+ALTER TABLE IF EXISTS public.member
+    ADD CONSTRAINT member_pkey_id UNIQUE (member_id);
+
+
+-- Name: policy_holder fky_policy_id; Type: FK CONSTRAINT; Schema: public; Owner: bbadmin
+ALTER TABLE ONLY public.policy_holder
+    ADD CONSTRAINT fky_policy_id FOREIGN KEY (policy_id) REFERENCES public.policy(policy_id) NOT VALID;
+-- Name: policy_holder fky_member_id; Type: FK CONSTRAINT; Schema: public; Owner: bbadmin
+ALTER TABLE ONLY public.policy_holder
+    ADD CONSTRAINT fky_member_id FOREIGN KEY (member_id) REFERENCES public.member(member_id) NOT VALID;
+-- Name: policy_holder fky_member_id; Type: FK CONSTRAINT; Schema: public; Owner: bbadmin
+ALTER TABLE ONLY public.policy
+    ADD CONSTRAINT fky_product_id FOREIGN KEY (product_id) REFERENCES public.product(product_id) NOT VALID;
+-- Name: product_coverage fky_product_coverage_id; Type: FK CONSTRAINT; Schema: public; Owner: bbadmin
+ALTER TABLE IF EXISTS public.product_coverage
+    ADD CONSTRAINT product_coverage_pkey_id UNIQUE (product_coverage_id);
+ALTER TABLE ONLY public.product_coverage
+    ADD CONSTRAINT fky_product_coverage_id FOREIGN KEY (product_id) REFERENCES public.product(product_id) NOT VALID;
+ALTER TABLE ONLY public.product_coverage_limit
+    ADD CONSTRAINT fky_product_coverage_id FOREIGN KEY (product_coverage_id) REFERENCES public.product_coverage(product_coverage_id) NOT VALID;
+ALTER TABLE ONLY public.product_coverage_physicallocation
+    ADD CONSTRAINT fky_product_coverage_id FOREIGN KEY (product_coverage_id) REFERENCES public.product_coverage(product_coverage_id) NOT VALID;
+ALTER TABLE ONLY public.product_coverage_deductibleconditions
+    ADD CONSTRAINT fky_product_coverage_id FOREIGN KEY (product_coverage_id) REFERENCES public.product_coverage(product_coverage_id) NOT VALID;
+

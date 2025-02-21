@@ -1,0 +1,8 @@
+Resource.Property,Property Type,Generator
+plansponsor.plan_sponsor_id,String,"IDGEN.get(""PS-"")"
+plansponsor.name,String,"fake.company()"
+plansponsor.group_id,String,"fake.random_int(min=300000, max=390000)"
+plansponsor.startDate,date,"fake.past_datetime()"
+plansponsor.endDate,date,"fake.past_datetime() - datetime.timedelta(365*20)"
+plansponsor.statusCode,String,"fake.random_element(('10','20','30','40','50','1011','2011'))"
+plansponsor.isActive,String,"""true"""
