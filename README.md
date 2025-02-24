@@ -159,7 +159,22 @@ db.claim.findOne({claim_id: "C-2100000"})
 ```
 This produces a single hierarchical json document that anyone can read.
 
-## Usage Examples: ##
+## Performance Testing ##
+Note - this is where the demo is specific to the Healthcare data set.  This is also the default load in in the relations_settings.json settings file.  The engine at this point does not optimize the performance in either postgres or mongodb.  To provide a fair performance comparison, a few indexeds need to be created.
+
+#### Indexes - MongoDB ####
+- member.member_id
+- provider.provider_id
+- claim.claim_id
+- claim.patient_id
+- claim.attending_provider_id
+
+#### Indexes - PostgreSQL ####
+There are many indexes and constraints to provide the best performance.  These are collected into a sql script file.
+- healthcare_indexes.sql
+The file can be pasted into a query editor screen or run from the command line using psql.  Note, the script assumes that the database is in the "public" schema.
+
+
 ```bash
 # --------------- Transactions ----------------- #
 # 100 transactions Mongodb
