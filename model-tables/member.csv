@@ -1,5 +1,5 @@
-Resource.Property,Property Type,Generator
-Member.member_id,String,"IDGEN.get(""M-"")"
+Resource.Property,Property Type,Generator,Extra
+Member.member_id,String,"IDGEN.get(""M-"")",indexed
 Member.lastName,String,fake.last_name()
 Member.firstName,String,fake.first_name()
 Member.middleName,String,fake.first_name()
@@ -9,7 +9,7 @@ Member.dateOfBirth,date,"fake.past_datetime() - datetime.timedelta(365*20)"
 Member.gender,String,"fake.random_element(('Male', 'Female', 'Other'))"
 Member.ethnicity,String,"fake.random_element(('White', 'American Indian', 'Asian', 'Hispanic', 'African American'))"
 Member.maritialStatus,String,"fake.random_element(('Married', 'Widow', 'Single'))"
-Member.primaryProvider_id,String,"IDGEN.random_value(""P-"")"
+Member.primaryProvider_id,String,"IDGEN.random_value(""P-"")",indexed
 Member.EffectiveDate,Date,"fake.past_datetime(start_date=""-90d"")"
 Member.EndDate,Date,"fake.future_datetime(end_date=""+8y"")"
 Member.CitizenshipStatusCode,String,"fake.random_element(('Native', 'Naturalised', 'Alien Permanent', 'Alien Temporary', 'Citizen', 'Foreign Worker', 'Permanent Resident', 'Foreigh ID Card Holder'))"

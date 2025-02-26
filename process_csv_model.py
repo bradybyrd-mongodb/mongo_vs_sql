@@ -54,6 +54,7 @@ def ddl_from_template(template, domain):
             bb.logit(f"Building table: {table}")
             last_table = table
             fkey = ""
+            indexes = []
             flds = []
             if len(table.split("_")) > 1:
                 #  Add a parent_id field
@@ -64,7 +65,9 @@ def ddl_from_template(template, domain):
                 new_field = stripProp(f"{table}_id")
                 fkey += f"  {new_field} varchar(20) NOT NULL,"
                 flds.append(new_field)
+                indexes.append(True)
             flds.append(field)
+            indexes.append(row["indexed"])
             ddl = (
                 f"CREATE TABLE IF NOT EXISTS {table} ("
                 "  id SERIAL PRIMARY KEY,"
@@ -77,7 +80,8 @@ def ddl_from_template(template, domain):
                 "fields": flds,
                 "generator": [row["generator"]],
                 "parent": row["parent"],
-                "sub_size" : row["sub_size"]
+                "sub_size" : row["sub_size"],
+                "indexes" : indexes
             }
 
         else:
@@ -86,6 +90,7 @@ def ddl_from_template(template, domain):
                 tables[table]["ddl"] = tables[table]["ddl"] + f"  {field} {ftype},"
                 tables[table]["fields"].append(field)
                 tables[table]["generator"].append(row["generator"])
+                tables[table]["indexes"].append(row["indexed"])
         first = False
     clean_ddl(tables)
     bb.logit("Table DDL:")
@@ -189,7 +194,8 @@ def fields_from_template(template):
                 "parent": "",
                 "type": pg_type(row[1]),
                 "generator": row[2],
-                "sub_size" : sub_size
+                "sub_size" : sub_size,
+                "indexed" : is_indexed(row)
             }
             depth = len(path)
             sub_size = 1
@@ -221,6 +227,12 @@ def fields_from_template(template):
                 result["parent"] = f"{path[0]}_{path[1]}_{path[2]}"
             ddl.append(result)
     return ddl
+
+def is_indexed(my_row):
+    if len(my_row) > 3:
+        return "index" in my_row[3]
+    else:
+        return False
 
 def master_from_file(file_name):
     return file_name.split("/")[-1].split(".")[0]

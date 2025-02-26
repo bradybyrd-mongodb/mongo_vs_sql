@@ -208,9 +208,7 @@ def build_sql_batch_from_template(tables, details={}):
         sql = attrs["insert"]
         idpos = 0
         rec_counts[cur_table] = batch_size * counts * num_procs
-        for inc in range(
-            0, batch_size * counts
-        ):  # iterate through the bulk insert count
+        for inc in range(0, batch_size * counts):  # iterate through the bulk insert count
             fld_cnt = 0
             hsh = {}
             if idpos > batch_size - 1:

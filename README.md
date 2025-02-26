@@ -160,7 +160,7 @@ db.claim.findOne({claim_id: "C-2100000"})
 This produces a single hierarchical json document that anyone can read.
 
 ## Performance Testing ##
-Note - this is where the demo is specific to the Healthcare data set.  This is also the default load in in the relations_settings.json settings file.  The engine at this point does not optimize the performance in either postgres or mongodb.  To provide a fair performance comparison, a few indexeds need to be created.
+Note - this is where the demo is specific to the Healthcare data set.  This is also the default load in in the relations_settings.json settings file.  The engine at this point does not optimize the performance in either postgres or mongodb.  To provide a fair performance comparison, a few indexes need to be created.
 
 #### Indexes - MongoDB ####
 - member.member_id
