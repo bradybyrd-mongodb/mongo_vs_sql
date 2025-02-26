@@ -56,18 +56,22 @@ def ddl_from_template(template, domain):
             fkey = ""
             indexes = []
             flds = []
+            flds2 = {}
             if len(table.split("_")) > 1:
                 #  Add a parent_id field
                 new_field = stripProp(f'{row["parent"]}_id')
                 fkey = f"  {new_field} varchar(20) NOT NULL,"
                 flds.append(new_field)
+                flds2[new_field] = {"index" : "y", "generator" : ""}
                 #  Add a self_id field
                 new_field = stripProp(f"{table}_id")
                 fkey += f"  {new_field} varchar(20) NOT NULL,"
                 flds.append(new_field)
                 indexes.append(True)
+                flds2[new_field] = {"index" : "y", "generator" : ""}
             flds.append(field)
             indexes.append(row["indexed"])
+            flds2[field] = {"index" : "y", "generator" : row["generator"]}
             ddl = (
                 f"CREATE TABLE IF NOT EXISTS {table} ("
                 "  id SERIAL PRIMARY KEY,"
@@ -81,7 +85,8 @@ def ddl_from_template(template, domain):
                 "generator": [row["generator"]],
                 "parent": row["parent"],
                 "sub_size" : row["sub_size"],
-                "indexes" : indexes
+                "indexes" : indexes,
+                "rich_field" : flds2
             }
 
         else:
@@ -91,6 +96,7 @@ def ddl_from_template(template, domain):
                 tables[table]["fields"].append(field)
                 tables[table]["generator"].append(row["generator"])
                 tables[table]["indexes"].append(row["indexed"])
+                tables[table]["rich_field"][field] = {"index" : "y", "generator" : row["generator"]}
         first = False
     clean_ddl(tables)
     bb.logit("Table DDL:")
