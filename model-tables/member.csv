@@ -36,7 +36,7 @@ Member.Communication().emailtype,String,"fake.random_element(('Home', 'Work'))"
 Member.Communication().SocialMediaID,String,fake.user_name()
 Member.Communication().SocialMediaType,String,"fake.random_element(('Facebook', 'Academia.edu', 'Bebo', 'CaringBridge', 'GoodReads', 'DailyStrength', 'Google+'))"
 Member.languages().language,String,"fake.random_element(('Albanian', 'Farsi', 'Hindi', 'Korean', 'Polish', 'Spanish', 'Arabic', 'French', 'Hmong', 'Laotian', 'Portuguese', 'Tagalog', 'Armenian', 'German', 'Italian', 'Lithuanian', 'Punjabi', 'Thai', 'Bengali', 'Greek', 'Japanese', 'Malay', 'Romanian', 'Turkish', 'Burmese', 'Haitian Creole'))"
-Member.languages().Usage,String,"fake.random_element(('Spoken', 'Reading', 'Writing', 'Native'))","Spoken, Reading, Writing, Native"
+Member.languages().Usage,String,"fake.random_element(('Spoken', 'Reading', 'Writing', 'Native'))"
 Member.Disability().DisabilityPeriodStartDate,date,"fake.past_datetime(start_date=""-90d"")"
 Member.Disability().DisabilityPeriodEndDate,date,"fake.future_datetime(end_date=""+3y"")"
 Member.Disability().DisabilityTypeCode,String ,"fake.random_element(('Autism', 'Emotional Disability', 'Hearing Impairement', 'Intellectual Disability', 'Other Health Imparement', 'Traumatic Brain Injury', 'Visual Imparement'))"

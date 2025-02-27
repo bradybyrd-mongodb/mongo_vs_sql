@@ -205,7 +205,6 @@ def build_sql_batch_from_template(tables, details={}):
         #counts = random.randint(1, 5) if len(cur_table.split("_")) > 1 else 1
         counts = sub_size if len(cur_table.split("_")) > 1 else 1
         bb.logit(f"Table: {cur_table} building data, factor: {counts}")
-        sql = attrs["insert"]
         idpos = 0
         rec_counts[cur_table] = batch_size * counts * num_procs
         for inc in range(0, batch_size * counts):  # iterate through the bulk insert count
@@ -214,10 +213,11 @@ def build_sql_batch_from_template(tables, details={}):
             if idpos > batch_size - 1:
                 idpos = 0
             for cur_field in attrs["fields"]:
+                gen = attrs["fields"][cur_field]["generator"]
                 # bb.logit(f'Field: {cur_field} - gen {attrs["generator"][fld_cnt]}')
                 if table_type == "master" and cur_field.lower() == master_id:
                     # master e.g. claim_id
-                    g_id = eval(attrs["generator"][fld_cnt])
+                    g_id = eval(gen)
                     cur_val = g_id
                     master_ids.append(g_id)
                     # bb.logit(f'[{cnt}] - GlobalID = {g_id}')
@@ -228,17 +228,23 @@ def build_sql_batch_from_template(tables, details={}):
                     cur_val = master_ids[idpos]
                 elif cur_field.lower().replace("_id", "") == attrs["parent"].lower():
                     # child of e.g. claim_claimline.claim_id
-                    cur_val = IDGEN.random_value(id_prefix)
+                    if gen == "":
+                        cur_val = IDGEN.random_value(id_prefix)
+                    else:
+                        cur_val = eval(gen)
                     # bb.logit(f'IDsub[{cur_val}] {cur_table} - {attrs["parent"]}\n{IDGEN.value_history}')
                 elif cur_field.lower() == f"{cur_table.lower()}_id":
                     # Internal id for table
                     prefx = cur_table[0:2].upper() + "-"
                     if table_type == "submaster":
-                        cur_val = IDGEN.get(prefx)
+                        if gen == "":
+                            cur_val = IDGEN.get(prefx)
+                        else:
+                            cur_val = eval(gen)                  
                     else:
                         cur_val = f"{prefx}{random.randint(1000,1000000)}"
                 else:
-                    cur_val = eval(attrs["generator"][fld_cnt])
+                    cur_val = eval(gen)
                     if type(cur_val) is bool:
                         cur_val = "T" if cur_val == True else "F"
                     fld_cnt += 1

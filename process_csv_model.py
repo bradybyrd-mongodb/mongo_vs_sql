@@ -4,6 +4,7 @@ import csv
 import re
 import random
 from collections import defaultdict
+from collections import OrderedDict
 import time
 import pprint
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -54,24 +55,25 @@ def ddl_from_template(template, domain):
             bb.logit(f"Building table: {table}")
             last_table = table
             fkey = ""
-            indexes = []
+            index_ddl = "" #CREATE INDEX IF NOT EXISTS idx_product_version_id ON public.product_version USING btree (product_version_id);
             flds = []
-            flds2 = {}
+            flds2 = OrderedDict()
             if len(table.split("_")) > 1:
                 #  Add a parent_id field
                 new_field = stripProp(f'{row["parent"]}_id')
                 fkey = f"  {new_field} varchar(20) NOT NULL,"
                 flds.append(new_field)
+                index_ddl += index_maker("y", table, new_field)
                 flds2[new_field] = {"index" : "y", "generator" : ""}
                 #  Add a self_id field
                 new_field = stripProp(f"{table}_id")
                 fkey += f"  {new_field} varchar(20) NOT NULL,"
                 flds.append(new_field)
-                indexes.append(True)
+                index_ddl += index_maker("y", table, new_field)
                 flds2[new_field] = {"index" : "y", "generator" : ""}
             flds.append(field)
-            indexes.append(row["indexed"])
-            flds2[field] = {"index" : "y", "generator" : row["generator"]}
+            index_ddl += index_maker(row["indexed"], table, field)
+            flds2[field] = {"index" : row["indexed"], "generator" : row["generator"]}
             ddl = (
                 f"CREATE TABLE IF NOT EXISTS {table} ("
                 "  id SERIAL PRIMARY KEY,"
@@ -81,28 +83,36 @@ def ddl_from_template(template, domain):
             tables[table] = {
                 "ddl": ddl,
                 "database": database,
-                "fields": flds,
-                "generator": [row["generator"]],
+                #"fields": flds,
+                #"generator": [row["generator"]],
                 "parent": row["parent"],
                 "sub_size" : row["sub_size"],
-                "indexes" : indexes,
-                "rich_field" : flds2
+                "index_ddl" : index_ddl,
+                "fields" : flds2
             }
 
         else:
             # bb.logit(f'Adding table data: {table}, {field}')
             if field not in tables[table]["fields"]:
                 tables[table]["ddl"] = tables[table]["ddl"] + f"  {field} {ftype},"
-                tables[table]["fields"].append(field)
-                tables[table]["generator"].append(row["generator"])
-                tables[table]["indexes"].append(row["indexed"])
-                tables[table]["rich_field"][field] = {"index" : "y", "generator" : row["generator"]}
+                #tables[table]["fields"].append(field)
+                #tables[table]["generator"].append(row["generator"])
+                index_ddl += index_maker(row["indexed"], table, field)
+                tables[table]["index_ddl"] = index_ddl
+                tables[table]["fields"][field] = {"index" : row["indexed"], "generator" : row["generator"]}
         first = False
     clean_ddl(tables)
     bb.logit("Table DDL:")
     #pprint.pprint(tables)
     jsonable_print(tables)
     return tables
+
+def index_maker(is_indexed, tab, fld):
+    # CREATE INDEX IF NOT EXISTS idx_product_version_id ON public.product_version USING btree (product_version_id);
+    if is_indexed == "n":
+        return ""
+    sql = f'CREATE INDEX IF NOT EXISTS idx_{fld} ON public.{tab} USING btree ({fld});'
+    return f"\n{sql}"
 
 def jsonable_print(json_var):
     output = pprint.pformat(json_var)
@@ -151,6 +161,7 @@ def clean_ddl(tables_obj):
         tables_obj[tab][
             "insert"
         ] = f'insert into {tab} ({",".join(tables_obj[tab]["fields"])}) values ({fmts});'
+
 
 def pg_type(mtype):
     type_x = {
@@ -235,10 +246,10 @@ def fields_from_template(template):
     return ddl
 
 def is_indexed(my_row):
-    if len(my_row) > 3:
-        return "index" in my_row[3]
-    else:
-        return False
+    result = "n"
+    if len(my_row) > 3 and "index" in my_row[3]:
+        result = "y"
+    return result
 
 def master_from_file(file_name):
     return file_name.split("/")[-1].split(".")[0]
@@ -254,6 +265,7 @@ def doc_from_csv(design):
     print(f'# --------------------------- Starting Doc ----------------------- #')
     icnt = 0
     for key in design:
+        # key is the table name
         parts = key.split("_")
         sub_size = design[key]["sub_size"]
         if icnt == 0: 
@@ -300,11 +312,12 @@ def generate_field_values(subdesign, doc_name, icnt):
     for iters in range(sub_size):
             scnt = 0
             for fld in subdesign["fields"]:
+                gen = subdesign["fields"][fld]["generator"]
                 if icnt > 0 and fld.lower().startswith(doc_name.lower()) and fld.endswith("_id"):
                     continue
                 else:
                     try:
-                        root[fld] = subdesign["generator"][scnt]
+                        root[fld] = gen
                     except Exception as e:
                         print(f"ERROR: field: {fld}, {scnt}")
                     scnt += 1
