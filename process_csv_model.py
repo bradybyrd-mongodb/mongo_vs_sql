@@ -265,7 +265,7 @@ def indexed_fields_from_template(template, domain):
                     fields.append(fld)
                 else:
                     if fld.lower().startswith(domain.lower()) and fld.endswith("_id"):
-                        skip_it = True
+                        skip_it = True # foreign key just for sql
                     else:
                         fields.append(f'{".".join(parts[1:])}.{fld}')
     return(fields)            
