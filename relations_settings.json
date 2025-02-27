@@ -6,7 +6,8 @@
   "base_counter": 4000000,
   "mongodb": {
     "uri": "mongodb+srv://claims-demo.vmwqj.mongodb.net",
-    "database": "healthcare_new",
+    "zdatabase": "healthcare_new",
+    "database": "temp_test",
     "collection": "member",
     "username": "main_admin",
     "password": "<secret>" 
@@ -15,7 +16,8 @@
     "host": "34.172.34.239",
     "username": "postgres",
     "password": "<secret>",
-    "database": "healthcare",
+    "zdatabase": "healthcare",
+    "database": "temp_test",
     "notes": "GCP CloudSQL Database"
   },
   "data": {

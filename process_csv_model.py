@@ -254,6 +254,22 @@ def is_indexed(my_row):
 def master_from_file(file_name):
     return file_name.split("/")[-1].split(".")[0]
 
+def indexed_fields_from_template(template, domain):
+    design = ddl_from_template(template, domain)
+    fields = []
+    for tab in design:
+        for fld in design[tab]["fields"]:
+            if design[tab]["fields"][fld]["index"] == "y":
+                parts = tab.split("_")
+                if len(parts) < 2:
+                    fields.append(fld)
+                else:
+                    if fld.lower().startswith(domain.lower()) and fld.endswith("_id"):
+                        skip_it = True
+                    else:
+                        fields.append(f'{".".join(parts[1:])}.{fld}')
+    return(fields)            
+             
 def doc_from_template(template, domain):
     design = ddl_from_template(template, domain)
     doc = doc_from_csv(design)

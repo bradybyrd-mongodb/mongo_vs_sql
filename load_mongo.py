@@ -19,6 +19,7 @@ from bbutil import Util
 from id_generator import Id_generator
 import process_csv_model as csvmod
 import datetime
+import pymongo
 from pymongo import MongoClient
 from pymongo.errors import BulkWriteError
 from pymongo import UpdateOne
@@ -109,7 +110,7 @@ def worker_load(ipos, args):
             #print(bulk_docs)
             db[domain].insert_many(bulk_docs)
             tot_ops += 1
-            if tot_ops > 2000:
+            if tot_ops > 10000:
                 conn.close()
                 tot_ops = 0
                 conn = client_connection()
@@ -118,6 +119,7 @@ def worker_load(ipos, args):
             bulk_docs = []
             cnt = 0
             bb.logit(f"[{pid}] - {domain} Loading batch: {k} - size: {batch_size}, Total:{tot}\nIDGEN - ValueHist: {IDGEN.value_history}")
+        ensure_indexes(template_file, domain, db)
     end_time = datetime.datetime.now()
     time_diff = (end_time - start_time)
     execution_time = time_diff.total_seconds()
@@ -173,6 +175,15 @@ def ID(key):
 def local_geo():
     coords = fake.local_latlng('US', True)
     return coords
+
+def ensure_indexes(template, domain, db_conn):
+    i_fields = csvmod.indexed_fields_from_template(template, domain)
+    cur = db_conn[domain].index_information()
+    keys = cur.keys()
+    for fld in i_fields:
+        if fld not in keys:
+            bb.logit(f"Creating index: {fld}")
+            db_conn[domain].create_index([(fld, pymongo.ASCENDING)])
 
 #----------------------------------------------------------------------#
 #   Utility Routines

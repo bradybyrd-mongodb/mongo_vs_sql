@@ -98,10 +98,6 @@ def load_sql_data():
     for i in jobs:
         i.join()
 
-def load_from_csv():
-    # Provider.specialties().status,String,optional,"fake.random_element(('Active', 'Inactive'))","Active, Inactive",,,,Approved,,Provider.CredentialedSpecialties().Status,Embed-PegaHC-Stringlist,7.21
-    boo = "boo"
-
 def worker_load(ipos, args):
     #  Reads EMR sample file and finds values
     cur_process = multiprocessing.current_process()
@@ -646,26 +642,33 @@ def sql_action(conn, action, tables):
     sql = ""
     cursor = conn.cursor()
     for table_name in tables:
+        bb.logit(f"Action: {action} {table_name}")
         if action == "create":
             sql = tables[table_name]["ddl"]
+            sql_execute(conn, cursor, sql)
+            sql_execute(conn, cursor, tables[table_name]["index_ddl"])
         elif action == "drop":
             sql = f"DROP TABLE {table_name};"
+            sql_execute(conn, cursor, sql)
         elif action == "delete":
             sql = f"delete from {table_name};"
-        try:
-            bb.logit(f"Action: {action} {table_name}")
-            print(sql)
-            cursor.execute(sql)
-        except psycopg.DatabaseError as err:
-            bb.logit(pprint.pformat(err))
-            print(sql)
-            conn.commit()
-            bb.logit(f"recovering...")
-        else:
-            print("OK")
-            conn.commit()
+            sql_execute(conn, cursor, sql)
+        
     cursor.close()
     return "success"
+
+def sql_execute(conn, cur, sql):
+    try:
+        print(sql)
+        cur.execute(sql)
+    except psycopg.DatabaseError as err:
+        bb.logit(pprint.pformat(err))
+        print(sql)
+        conn.commit()
+        bb.logit(f"recovering...")
+    else:
+        print("OK")
+        conn.commit()
 
 def create_indexes():
     boo = "boo"
