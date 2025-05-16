@@ -1,4 +1,4 @@
-Full Name,Property Type,Generator,Extra
+Path,Property Type,Generator,Extra
 Provider.provider_id,String,"IDGEN.get(""P-"")",indexed
 Provider.federalTaxID,String,fake.ssn()
 Provider.nationalProviderIdentifier,String,"IDGEN.get(""NPI-"")"

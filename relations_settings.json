@@ -3,11 +3,11 @@
   "process_count": 3,
   "batch_size": 1000,
   "batches": 10,
-  "base_counter": 4000000,
+  "base_counter": 2010000,
   "mongodb": {
     "uri": "mongodb+srv://claims-demo.vmwqj.mongodb.net",
-    "zdatabase": "healthcare_new",
-    "database": "temp_test",
+    "database": "healthcare_new",
+    "zdatabase": "temp_test",
     "collection": "member",
     "username": "main_admin",
     "password": "<secret>" 
@@ -19,6 +19,9 @@
     "zdatabase": "healthcare",
     "database": "temp_test",
     "notes": "GCP CloudSQL Database"
+  },
+  "gcp" : {
+    "project_id" : "bradybyrd-poc"
   },
   "data": {
     "provider": {
