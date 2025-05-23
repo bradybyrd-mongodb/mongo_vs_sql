@@ -275,6 +275,51 @@ def doc_from_template(template, domain):
     doc = doc_from_csv(design)
     return doc
 
+# --------------------------------------------------------------- #
+#   For Documents - expanding the capability when generating Mongo-only data
+#  BJB 5/15/25
+def batch_digest_csv(domain, template_file):
+    sub_size = 5
+    islist = False
+    last_root = ""
+    batch_list = {}
+    with open(template_file) as csvfile:
+        propreader = csv.reader(csvfile)
+        icnt = 0
+        for row in propreader:
+            if icnt == 0:
+                icnt += 1
+                continue
+            #print(row)
+            path = row[0].split('.')
+            if ")" in row[0]: #path[-2].endswith('()'):  
+                islist = True
+                if "CONTROL" in row[0]:
+                    counts = random.randint(1, int(row[1]))
+                    icnt += 1
+                    continue
+            else:
+                islist = False
+            # Digest the csv into segments of field for assembly
+            batch_accounting(batch_list, path, row[2], row[1], last_root)
+            icnt += 1
+    del batch_list["last_root"]
+    return(batch_list)
+
+def batch_accounting(batch_doc, path, generator, ftype, last_root):
+    cur_root = ",".join(path[0:-1])
+    action = "append"
+    cdoc = {"field" : path[-1], "type": ftype, "gen": generator}
+    if last_root != cur_root:
+        if cur_root not in batch_doc.keys():
+            batch_doc[cur_root] = [cdoc]
+            action = "new"
+    if action == "append":
+        batch_doc[cur_root].append(cdoc)
+    batch_doc["last_root"] = cur_root
+
+# --------------------------------------------------- #
+#  Approach only works with simeple structures
 def doc_from_csv(design):
     doc = {}
     doc_name = "none"

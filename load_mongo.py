@@ -16,7 +16,7 @@ from decimal import Decimal
 base_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(base_dir))
 from bbutil import Util
-from id_generator import Id_generator
+#from id_generator import Id_generator
 import process_csv_model as csvmod
 import datetime
 import pymongo
@@ -27,7 +27,7 @@ from pymongo import UpdateMany
 from faker import Faker
 
 fake = Faker()
-settings_file = "relations_settings.json"
+settings_file = "settings.json"
 
 def synth_data_load():
     # python3 relational_replace_loader.py action=load_data
@@ -62,95 +62,212 @@ def synth_data_load():
         i.join()
 
 def worker_load(ipos, args):
-    #  Reads EMR sample file and finds values
+    #  Called for each separate process
     cur_process = multiprocessing.current_process()
+    random.seed()
     pid = cur_process.pid
     conn = client_connection()
     bb.message_box(f"[{pid}] Worker Data", "title")
-    settings = bb.read_json(settings_file)
+    _details_["domain"] = "not-yet"
+    _details_["job"] = {}
+    _details_["id_generator"] = {}
+    _details_["last_root"] = ""
+    _details_["batching"] =  False
+    _details_["mixin"] = {}
+    _details_["batches"] = {}
+        
+    #IDGEN = args["idgen"]
     batch_size = settings["batch_size"]
     batches = settings["batches"]
     bb.logit('Current process is %s %s' % (cur_process.name, pid))
     start_time = datetime.datetime.now()
-    collection = settings["mongodb"]["collection"]
     db = conn[settings["mongodb"]["database"]]
-    #IDGEN = Id_generator({"seed" : base_counter, "size" : count})
     bulk_docs = []
-    ts_start = datetime.datetime.now()
-    job_size = batches * batch_size
-    if "size" in ARGS:
-        job_size = int(ARGS["size"])
-    cur_time = ts_start
-    cnt = 0
     tot = 0
     if "template" in args:
         template = args["template"]
         master_table = master_from_file(template)
-        job_info = {master_table : {"path" : template, "size" : job_size, "id_prefix" : f'{master_table[0].upper()}-'}}
+        job_info = {master_table : {"path" : template, "multiplier" : 1, "id_prefix" : f'{master_table[0].upper()}-'}}
     else:
         job_info = settings["data"]
     # Loop through collection files
+    #pprint.pprint(job_info)
     for domain in job_info:
-        details = job_info[domain]
-        prefix = details["id_prefix"]
-        count = details["size"]
-        template_file = details["path"]
-        design = csvmod.doc_from_template(template_file, domain)
-        base_counter = settings["base_counter"] + count * ipos
-        IDGEN.set({"seed" : base_counter, "size" : count, "prefix" : prefix})
+        _details_["domain"] = domain
+        _details_["job"] = job_info[domain]
+        _details_["batches"] = {}
+        batch_size = settings["batch_size"]
+        prefix = _details_["job"]["id_prefix"]
+        template = _details_["job"]["path"]
+        if "size" in _details_["job"] and _details_["job"]["size"] < batch_size:
+            batch_size = _details_["job"]["size"]
+        multiplier = _details_["job"]["multiplier"]
+        count = int(batches * batch_size * multiplier)
+        base_counter = settings["base_counter"] + count * ipos + 1
+        id_generator("init", prefix, {"base": settings["base_counter"], "size": count, "cur_base": base_counter, "next" : base_counter})
+        #IDGEN.set({"seed" : base_counter, "size" : count, "prefix" : prefix})
+        bb.logit(f'[{pid}] - {domain} | IDGEN - ValueHist: {_details_["id_generator"]}')
         bb.message_box(f'[{pid}] {domain} - base: {base_counter}', "title")
         tot = 0
-        tot_ops = 0
         batches = int(count/batch_size)
+        if count < batch_size:
+            batch_size = count
+        batch_map = csvmod.batch_digest_csv(domain, template)
+        print(f"# ---------------------- {domain} Document Map ------------------------ #")
+        pprint.pprint(batch_map) 
+        print("# --------------------------------------------------------------- #")
         if batches == 0:
             batches = 1
-        for k in range(1): #range(batches):
-            #bb.logit(f"[{pid}] - {domain} Loading batch: {k} - size: {batch_size}")
-            bulk_docs = build_batch_from_template(domain, {"design": design, "connection" : conn, "template" : template_file, "batch" : k, "id_prefix" : prefix, "base_count" : base_counter, "size" : count})
+        for cur_batch in range(batches):
+            bb.logit(f"[{pid}] - {domain} Loading batch: {cur_batch}, {batch_size} records")
+            cnt = 0
+            bulk_docs = build_batch_from_template(domain, batch_map, {"batch" : cur_batch, "base_count" : base_counter, "size" : batch_size})
+            cnt += 1
             #print(bulk_docs)
             db[domain].insert_many(bulk_docs)
-            tot_ops += 1
-            if tot_ops > 10000:
-                conn.close()
-                tot_ops = 0
-                conn = client_connection()
-                db = conn[settings["mongodb"]["database"]]
-            tot += len(bulk_docs)
+            #cur_ids = list(map(get_id, bulk_docs))
+            #print(f'[{pid}] - CurIDs: {pprint.pformat(cur_ids)}')
+            siz = len(bulk_docs)
+            tot += siz
             bulk_docs = []
             cnt = 0
-            bb.logit(f"[{pid}] - {domain} Loading batch: {k} - size: {batch_size}, Total:{tot}\nIDGEN - ValueHist: {IDGEN.value_history}")
-        ensure_indexes(template_file, domain, db)
+            #bb.logit(f"[{pid}] - {domain} Batch Complete: {cur_batch} - size: {siz}, Total:{tot}\nIDGEN - ValueHist: {IDGEN.value_history}")
+            bb.logit(f"[{pid}] - {domain} Batch Complete: {cur_batch} - size: {siz}, Total:{tot}")
     end_time = datetime.datetime.now()
     time_diff = (end_time - start_time)
     execution_time = time_diff.total_seconds()
     conn.close()
     bb.logit(f"{cur_process.name} - Bulk Load took {execution_time} seconds")
 
-def build_batch_from_template(cur_coll, details = {}):
+def get_id(doc):
+    return doc["_id"]
+
+def build_batch_from_template(domain, batch_map, details = {}):
     batch_size = settings["batch_size"]
     if "size" in details and details["size"] < batch_size:
         batch_size = details["size"]
-    design = details["design"]
-    sub_size = 5
     cnt = 0
     records = []
-    #print("# --------------------------- Initial Doc -------------------------------- #")
-    #pprint.pprint(design)
-    #print("# --------------------------- End -------------------------------- #")
-    result = []
     for J in range(batch_size): # iterate through the bulk insert count
         # A dictionary that will provide consistent, random list lengths
-        counts = random.randint(1, sub_size) #defaultdict(lambda: random.randint(1, 5))
-        data = {}
-        cdesign = copy.deepcopy(design)
-        data = render_design(cdesign, counts)
+        data = batch_build_doc(domain, batch_map)
         data["doc_version"] = settings["version"]
         cnt += 1
         records.append(data)
-    bb.logit(f'{batch_size} {cur_coll} batch complete')
+    #bb.logit(f'{batch_size} {cur_coll} batch complete')
     return(records)
 
-def render_design(design, count):
+def batch_build_doc(collection, batch_map):
+    # Start with base fields, go next level n-times
+    doc = {}
+    last_key = ""
+    sub_size = 5
+    counts = random.randint(1, sub_size)
+    is_list = False
+    #print(f'C: {collection}')
+    for key, value in batch_map.items():
+        parts = key.split(",")
+        cur_base = key.replace(last_key, "")
+        res = ""
+        #print("# ------------------------------------------ #")
+        #print(f'Key: {key}, cur: {cur_base}')
+        if key.lower() == collection:
+            for item in value:
+                #print(f'Field: {item["field"]}')
+                ans = batch_generator_value(item["gen"], doc)
+                if "CONTROL" not in item["type"]:
+                    doc[item["field"]] = ans
+        else:
+            if parts[-1].endswith(')'):
+                is_list = True
+                res = re.findall(r'\(.*\)',cur_base)[0]
+                if res == "()":
+                    lcnt = counts
+                else:
+                    lcnt = int(res.replace("(","").replace(")",""))
+            else:
+                is_list = False
+                lcnt = 1
+            
+            inc = len(parts[1:])
+            #print(f"doing parts {inc}")
+            #print(parts)
+            if inc == 1:
+                #print(f'Adding sub_arr to doc[{cleaned(parts[1])}]')
+                doc[cleaned(parts[1])] = batch_sub(key, value, lcnt, is_list, doc)
+            elif inc == 2:
+                #print(f'Adding sub_arr to doc[{cleaned(parts[1])}][{cleaned(parts[2])}]')
+                if is_list:
+                    for k in range(len(doc[cleaned(parts[1])])):
+                        doc[cleaned(parts[1])][k][cleaned(parts[2])] = batch_sub(key, value, lcnt, is_list, doc)
+                else:
+                    doc[cleaned(parts[1])][cleaned(parts[2])] = batch_sub(key, value, lcnt, is_list, doc)
+            elif inc == 3:
+                # Ex: Asset.parents().location.type
+                if part_is_list[parts[1]]:
+                    for k in range(len(doc[cleaned(parts[1])])):
+                        if part_is_list[parts[2]]:
+                            for j in range(len(doc[cleaned(parts[2])])):
+                                doc[cleaned(parts[1])][k][cleaned(parts[2])][j][cleaned(parts[3])] = batch_sub(key, value, lcnt, is_list, doc)
+                        else:
+                            doc[cleaned(parts[1])][k][cleaned(parts[2])][cleaned(parts[3])] = batch_sub(key, value, lcnt, is_list, doc)
+                else:
+                    if part_is_list[parts[2]]:
+                        for j in range(len(doc[cleaned(parts[2])])):
+                            doc[cleaned(parts[1])][cleaned(parts[2])][j][cleaned(parts[3])] = batch_sub(key, value, lcnt, is_list, doc)
+                        else:
+                            doc[cleaned(parts[1])][cleaned(parts[2])][cleaned(parts[3])] = batch_sub(key, value, lcnt, is_list, doc)
+        last_key = key
+    return(doc)
+
+def batch_sub(item, fields, cnt, isarr, cur_doc):
+    sub_arr = []
+    for k in range(cnt):
+        sub_doc = {}
+        for item in fields:
+            sub_doc[item["field"]] = batch_generator_value(item["gen"], cur_doc)
+        sub_arr.append(sub_doc)
+    if not isarr:
+        sub_arr = sub_arr[0]
+    return(sub_arr)
+
+def cleaned(str):
+    str = re.sub(r'\(.*\)','', str)
+    return str.strip()
+
+def part_is_list(part):
+    return part.endswith(')')
+
+def batch_generator_value(generator, cur_doc):
+    mixin = {}
+    if "mixin" in _details_:
+        mixin = _details_["mixin"]
+    try:
+        if "_SAVE_" in generator:
+            gen2 = generator.replace("_SAVE_","")
+            newgen = gen2[:gen2.find(")") + 1]
+            leftover = gen2.replace(newgen,"")
+            cache = eval(newgen)
+            _details_["cache"] = cache
+            #bb.logit(f'Save: {str(cache) + leftover}')
+            result = eval(str(cache) + leftover) 
+        elif "_CACHE_" in generator:
+            cache = _details_["cache"]
+            #bb.logit(f'Cache: {generator.replace("_CACHE_", str(cache))}')
+            result = eval(generator.replace("_CACHE_", str(cache)))
+        else:
+            #bb.logit(f'Eval: {generator}')
+            result = eval(generator) 
+    except Exception as e:
+        print("---- ERROR --------")
+        pprint.pprint(generator)
+        print("---- error --------")
+        print(e)
+        exit(1)
+    return(result)
+
+#  Deprecated
+def zzrender_design(design, count):
     # Takes template and evals the gnerators
     #pprint.pprint(design)
     for key, val in design.items():
@@ -166,15 +283,11 @@ def render_design(design, count):
     return design
 
 def master_from_file(file_name):
-    return file_name.split("/")[-1].split(".")[0]
-
-def ID(key):
-    id_map[key] += 1
-    return key + str(id_map[key]+base_counter)
-
-def local_geo():
-    coords = fake.local_latlng('US', True)
-    return coords
+    ans = file_name.split("/")[-1].split(".")[0]
+    with open(file_name) as handle:
+        conts = handle.readlines()
+        ans = conts[1].split(".")[0]
+    return ans.lower()
 
 def ensure_indexes(template, domain, db_conn):
     i_fields = csvmod.indexed_fields_from_template(template, domain)
@@ -184,6 +297,37 @@ def ensure_indexes(template, domain, db_conn):
         if fld not in keys:
             bb.logit(f"Creating index: {fld}")
             db_conn[domain].create_index([(fld, pymongo.ASCENDING)])
+
+#----------------------------------------------------------------------#
+#   Data Helpers
+#----------------------------------------------------------------------#
+def local_geo():
+    coords = fake.local_latlng('US', True)
+    return [float(coords[1]), float(coords[0])]
+
+def id_generator(action, prefix, details = {}):
+    result = "none"
+    if action != "init" and prefix not in _details_["id_generator"]:
+        _details_["id_generator"][prefix] = {"base": 1000000, "size": 1000000, "cur_base": 1000000, "next" : 1000000}
+    
+    if action == "init":
+        _details_["id_generator"][prefix] = {"base": details["base"], "size": details["size"], "cur_base": details["cur_base"], "next" : details["cur_base"]}
+    elif action == "next":
+         result =  f'{prefix}{_details_["id_generator"][prefix]["next"]}'
+         _details_["id_generator"][prefix]["next"] += 1
+    elif action == "batch":
+        result =  _details_["id_generator"][prefix]["base"] + details["batch_size"]
+        _details_["id_generator"][prefix]["next"] += details["batch_size"]
+    elif action == "random":
+        low = _details_["id_generator"][prefix]["cur_base"]
+        high = _details_["id_generator"][prefix]["cur_base"] + _details_["id_generator"][prefix]["size"]
+        result = f'{prefix}{fake.random_int(min=low,max=high)}'
+    return result
+
+# Still here for compatibliity with old csv templates
+def ID(key):
+    id_map[key] += 1
+    return key + str(id_map[key]+base_counter)
 
 #----------------------------------------------------------------------#
 #   Utility Routines
@@ -257,6 +401,18 @@ def time_query():
         cnt += 1
     conn.close()
 
+import json  
+  
+def import_modules_from_config(module_list):    
+    # Dynamically import modules, only one for now as "mix"
+    global mix
+    for module_name in module_list:  
+        try:  
+            mix = __import__(module_name)  
+            print(f"Successfully imported module: {module_name}")  
+        except ImportError as e:  
+            print(f"Error importing module '{module_name}': {e}")  
+
 def client_connection(type = "uri", details = {}):
     lsettings = settings["mongodb"]
     mdb_conn = lsettings[type]
@@ -281,12 +437,17 @@ def client_connection(type = "uri", details = {}):
 #     MAIN
 #------------------------------------------------------------------#
 if __name__ == "__main__":
+    mix = None
     bb = Util()
     ARGS = bb.process_args(sys.argv)
     settings = bb.read_json(settings_file)
+    import_modules_from_config(settings["mixins"])
     base_counter = settings["base_counter"]
-    IDGEN = Id_generator({"seed" : base_counter})
+    #  IDGEN was failing because of random init issues in a sep class
+    #IDGEN = Id_generator({"seed" : base_counter})
     id_map = defaultdict(int)
+    mix.prove_it()
+    _details_ = {} #set global to avoid passing args - note lives in a single process
     if "wait" in ARGS:
         interval = int(ARGS["wait"])
         if interval > 10:
