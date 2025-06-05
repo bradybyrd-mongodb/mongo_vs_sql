@@ -60,7 +60,7 @@ letters = string.ascii_uppercase
       create database single_view with owner bbadmin;
       psql --username bbadmin single_view
 """
-settings_file = "relations_settings.json"
+settings_file = "settings.json"
 
 def load_sql_data():
     # read settings and echo back

@@ -288,3 +288,23 @@ SQL_TRANSACTION = (
 )
 ```
 
+## Mixins and Complicated Data Sets ##
+Sometimes, when building hierarchical data subdocuments need some knowledge of the parent document.  This is difficult with the csv files and the faker library because every line is isolated.  To solve this, there is the concept of a mixin.  A mixin is a custom python module, referenced in the preferences file that gets added into the the environment as "mix".  Like this:
+```json
+"mixins" : [
+    "policy_mix"
+  ],
+```
+In the code this will come in as:
+```python
+import policy_mx as mix
+```
+in the csv file, it can be called like this:
+```csv
+Policy.premium,double,"fake.random_int(min=40, max=1000)"
+Policy.details,CONTROL,"mix.build_policy(fake.random_element(mix._policy_types_), cur_doc)"
+Policy.holder.firstName,String,fake.first_name()
+```
+In this example, the policy.details will vary depending on the value for policy_type (a polymorphic document).  Thus we pass a faker choice from the list of policy_types contained in the mixin.  
+Key features: The row must contain "CONTROL" in the data type column.  The mix method will get a reference to the existing document "cur_doc".  You can modify any part of the document.  The field designation here (policy.details) is somewhat useless as you can insert it in the document directly.
+*Note* For now, there is no analog for this capability in SQL and will therefore be ignored when generating a sql database.

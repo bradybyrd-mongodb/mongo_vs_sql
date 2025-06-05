@@ -203,7 +203,7 @@ def fields_from_template(template):
         for row in propreader:
             #print(row)
             path = row[0].split(".")
-            if "CONTROL" in row[0]:
+            if "CONTROL" in row[0] or "CONTROL" in row[1]:
                 continue
             result = {
                 "name": "",
@@ -294,7 +294,7 @@ def batch_digest_csv(domain, template_file):
             path = row[0].split('.')
             if ")" in row[0]: #path[-2].endswith('()'):  
                 islist = True
-                if "CONTROL" in row[0]:
+                if "CONTROL" in row[0] or "CONTROL" in row[1]:
                     counts = random.randint(1, int(row[1]))
                     icnt += 1
                     continue
