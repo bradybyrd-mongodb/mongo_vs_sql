@@ -127,7 +127,7 @@ def policy_renters(cur_doc):
             {"type" : "fire", "timestamp" : fake.past_datetime(start_date="-1000d"), "claim": "C-23959586"}
         ],
         "risks" : {
-            "flood_zone" : fake.random_element("yes", "no"),
+            "flood_zone" : fake.random_element(("yes", "no")),
             "fire_danger" : fake.random_element(("low", "moderate", "high")),
             "earthquake_zone" : fake.random_element(("yes", "no"))
         },

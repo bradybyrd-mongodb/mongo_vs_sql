@@ -1,7 +1,7 @@
 Path,Property Type,Generator,Extra
-Provider.provider_id,String,"IDGEN.get(""P-"")",indexed
+Provider.provider_id,String,"id_generator(""next"",""P-"")",indexed
 Provider.federalTaxID,String,fake.ssn()
-Provider.nationalProviderIdentifier,String,"IDGEN.get(""NPI-"")"
+Provider.nationalProviderIdentifier,String,"id_generator(""next"",""NPI-"")"
 Provider.NPIType,String,"fake.random_element(('Individual', 'Institution'))"
 Provider.lastName,String,fake.last_name(),indexed
 Provider.firstName,String,fake.first_name()
