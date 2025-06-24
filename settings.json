@@ -1,0 +1,61 @@
+{
+  "version": "2.1",
+  "process_count": 1,
+  "batch_size": 10000,
+  "batches": 1,
+  "base_counter": 2010000,
+  "mongodb": {
+    "uri": "mongodb+srv://claims-demo.vmwqj.mongodb.net",
+    "zzdatabase": "fleet_tracking",
+    "database": "healthcare_new",
+    "zdatabase": "temp_test",
+    "collection": "member",
+    "username": "main_admin",
+    "password": "<secret>" 
+  },
+  "postgres": {
+    "host": "34.172.34.239",
+    "username": "postgres",
+    "password": "<secret>",
+    "database": "healthcare",
+    "zdatabase": "temp_test",
+    "notes": "GCP CloudSQL Database"
+  },
+  "mixins" : [
+    "asset_mix"
+  ],
+  "data": {
+    "tenant": {
+      "path": "model-tables/tenant.csv",
+      "multiplier": 0.01,
+      "id_prefix": "T-"
+    },
+    "asset": {
+      "path": "model-tables/asset_fleet.csv",
+      "multiplier": 1,
+      "id_prefix": "A-"
+    }
+  },
+  "data_healthcare": {
+    "policy": {
+      "path": "model-tables/policy_multi.csv",
+      "multiplier": 1,
+      "id_prefix": "PO-"
+    },
+    "provider": {
+      "path": "model-tables/provider.csv",
+      "multiplier": 2,
+      "id_prefix": "P-"
+    },
+    "member": {
+      "path": "model-tables/member.csv",
+      "multiplier": 10,
+      "id_prefix": "M-"
+    },
+    "claim": {
+      "path": "model-tables/claim.csv",
+      "multiplier": 50,
+      "id_prefix": "C-"
+    }
+  }
+}

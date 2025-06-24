@@ -1,0 +1,16 @@
+Resource.Property,Property Type,Generator,Extra
+Policy.policy_id,String,"id_generator(""next"",""P-"")",indexed
+Policy.name,String,fake.bs()
+Policy.effectiveDate,date,"fake.past_datetime()"
+Policy.expirationDate,date,"fake.past_datetime() - datetime.timedelta(365*20)"
+Policy.statusCode,String,"fake.random_element(('10','20','30','40','50','1011','2011'))"
+Policy.version,String,"1.0"
+Policy.isActive,String,"""true"""
+Policy.premium,double,"fake.random_int(min=40, max=1000)"
+Policy.details,CONTROL,"mix.build_policy(fake.random_element(mix._policy_types_), cur_doc)"
+Policy.holder.firstName,String,fake.first_name()
+Policy.holder.lastName,String,fake.last_name()
+Policy.holder.middleName,String,fake.first_name()
+Policy.holder.suffix,String,fake.suffix()
+Policy.holder.postalCode,String,fake.postcode()
+Policy.holder.member_id,String,"id_generator(""random"",""M-"")"

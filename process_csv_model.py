@@ -295,7 +295,7 @@ def batch_digest_csv(domain, template_file):
             if ")" in row[0]: #path[-2].endswith('()'):  
                 islist = True
                 if "CONTROL" in row[0] or "CONTROL" in row[1]:
-                    counts = random.randint(1, int(row[1]))
+                    #counts = random.randint(1, int(row[1]))
                     icnt += 1
                     continue
             else:

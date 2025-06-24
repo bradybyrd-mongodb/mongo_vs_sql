@@ -96,6 +96,7 @@ def worker_load(ipos, args):
         _details_["domain"] = domain
         _details_["job"] = job_info[domain]
         _details_["batches"] = {}
+        _details_["counter"] = 0
         batch_size = settings["batch_size"]
         prefix = _details_["job"]["id_prefix"]
         template = _details_["job"]["path"]
@@ -239,48 +240,31 @@ def part_is_list(part):
     return part.endswith(')')
 
 def batch_generator_value(generator, cur_doc):
-    mixin = {}
-    if "mixin" in _details_:
-        mixin = _details_["mixin"]
     try:
-        if "_SAVE_" in generator:
-            gen2 = generator.replace("_SAVE_","")
-            newgen = gen2[:gen2.find(")") + 1]
-            leftover = gen2.replace(newgen,"")
-            cache = eval(newgen)
-            _details_["cache"] = cache
-            #bb.logit(f'Save: {str(cache) + leftover}')
-            result = eval(str(cache) + leftover) 
-        elif "_CACHE_" in generator:
-            cache = _details_["cache"]
-            #bb.logit(f'Cache: {generator.replace("_CACHE_", str(cache))}')
-            result = eval(generator.replace("_CACHE_", str(cache)))
-        else:
-            #bb.logit(f'Eval: {generator}')
-            result = eval(generator) 
+        #bb.logit(f'Eval: {generator}')
+        result = eval(generator) 
     except Exception as e:
         print("---- ERROR --------")
         pprint.pprint(generator)
         print("---- error --------")
         print(e)
+        import traceback
+        traceback.print_exc()
         exit(1)
     return(result)
 
 #  Deprecated
-def zzrender_design(design, count):
+def test_mix():
     # Takes template and evals the gnerators
-    #pprint.pprint(design)
-    for key, val in design.items():
-        if isinstance(val, dict):
-            render_design(val,count)
-        elif isinstance(val, list):
-            render_design(val[0],count)
-        else:
-            try:
-                design[key] = eval(val)
-            except Exception as e:
-                print(f'ERROR: eval: {val}')
-    return design
+    gen = "mix.get_sensors(fake.random_element(mix._sensor_types_), cur_doc)"
+    for k in range(10):
+        doc = {"name" : "brady", "id_val": f'BB-{random.randint(100000,200000)}'}
+        res = batch_generator_value(gen, doc)
+        pprint.pprint(doc)
+    print("# ------------------------------------- #")
+    for k in range(1000):
+        mix.sensible_value(100.0)
+    return
 
 def master_from_file(file_name):
     ans = file_name.split("/")[-1].split(".")[0]
@@ -463,6 +447,8 @@ if __name__ == "__main__":
         run_query()
     elif ARGS["action"] == "timer":
         time_query()
+    elif ARGS["action"] == "test":
+        test_mix()
     else:
         print(f'{ARGS["action"]} not found')
     #conn.close()
