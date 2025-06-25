@@ -170,8 +170,8 @@ def batch_build_doc(collection, batch_map):
         parts = key.split(",")
         cur_base = key.replace(last_key, "")
         res = ""
-        #print("# ------------------------------------------ #")
-        #print(f'Key: {key}, cur: {cur_base}')
+        print("# ------------------------------------------ #")
+        print(f'Key: {key}, cur: {cur_base}, parts: {parts}')
         if key.lower() == collection:
             for item in value:
                 #print(f'Field: {item["field"]}')
@@ -181,7 +181,7 @@ def batch_build_doc(collection, batch_map):
         else:
             if parts[-1].endswith(')'):
                 is_list = True
-                res = re.findall(r'\(.*\)',cur_base)[0]
+                res = re.findall(r'\(\d*\)',cur_base)[0]
                 if res == "()":
                     lcnt = counts
                 else:
@@ -192,37 +192,50 @@ def batch_build_doc(collection, batch_map):
             
             inc = len(parts[1:])
             #print(f"doing parts {inc}")
-            #print(parts)
-            if inc == 1:
-                #print(f'Adding sub_arr to doc[{cleaned(parts[1])}]')
-                doc[cleaned(parts[1])] = batch_sub(key, value, lcnt, is_list, doc)
-            elif inc == 2:
-                #print(f'Adding sub_arr to doc[{cleaned(parts[1])}][{cleaned(parts[2])}]')
-                if is_list:
-                    for k in range(len(doc[cleaned(parts[1])])):
-                        doc[cleaned(parts[1])][k][cleaned(parts[2])] = batch_sub(key, value, lcnt, is_list, doc)
-                else:
-                    doc[cleaned(parts[1])][cleaned(parts[2])] = batch_sub(key, value, lcnt, is_list, doc)
-            elif inc == 3:
-                # Ex: Asset.parents().location.type
-                if part_is_list[parts[1]]:
-                    for k in range(len(doc[cleaned(parts[1])])):
-                        if part_is_list[parts[2]]:
-                            for j in range(len(doc[cleaned(parts[2])])):
-                                doc[cleaned(parts[1])][k][cleaned(parts[2])][j][cleaned(parts[3])] = batch_sub(key, value, lcnt, is_list, doc)
-                        else:
-                            doc[cleaned(parts[1])][k][cleaned(parts[2])][cleaned(parts[3])] = batch_sub(key, value, lcnt, is_list, doc)
-                else:
-                    if part_is_list[parts[2]]:
-                        for j in range(len(doc[cleaned(parts[2])])):
-                            doc[cleaned(parts[1])][cleaned(parts[2])][j][cleaned(parts[3])] = batch_sub(key, value, lcnt, is_list, doc)
-                        else:
-                            doc[cleaned(parts[1])][cleaned(parts[2])][cleaned(parts[3])] = batch_sub(key, value, lcnt, is_list, doc)
-        last_key = key
-    return(doc)
+            #print("# --- starting doc ---- #")
+            #pprint.pprint(doc)
+            handle_parts(doc, parts, 0, [key, value, lcnt, is_list], [])
+    return doc
+            
+# ex Claim,claimLine(),payment
+def handle_parts(doc, parts, cnt, args, ipath = []):
+    curdoc = doc
+    result = batch_sub(args[0],args[1],args[2],args[3], doc)
+    if cnt == 0:
+        handle_parts(doc, parts, cnt + 1, args, ipath)
+    elif cnt >= len(parts):
+        return
+    else:
+        ipart = parts[cnt]
+        print(f'IPART: {ipart}, cnt: {cnt}, parts: {parts}, ipath: {ipath}')
+        curdoc = doc_path(doc, ipart, ipath)
+        result = batch_sub(args[0],args[1],args[2],args[3], curdoc)
+        if cnt == len(parts) - 1:
+            if part_is_list(parts[cnt - 1]):
+                for k in curdoc:
+                    result = batch_sub(args[0],args[1],args[2],args[3], curdoc)
+                    k[cleaned(ipart)] = result
+            else:
+                curdoc[cleaned(ipart)] = result
+            #print("# ---- curdoc ---- #")
+            #pprint.pprint(curdoc)
+        else:
+            ipath.append(ipart)
+            handle_parts(curdoc, parts, cnt + 1, args, ipath) 
+        
+
+def doc_path(doc, item, ipath):
+    result = doc
+    for k in ipath:
+        result = doc[cleaned(k)]
+    #print(f" --- curdoc --- {ipath}")
+    #pprint.pprint(result)
+    return result
 
 def batch_sub(item, fields, cnt, isarr, cur_doc):
     sub_arr = []
+    if not isarr:
+        cnt = 1
     for k in range(cnt):
         sub_doc = {}
         for item in fields:

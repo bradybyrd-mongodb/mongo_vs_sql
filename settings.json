@@ -1,13 +1,13 @@
 {
   "version": "2.1",
   "process_count": 1,
-  "batch_size": 10000,
+  "batch_size": 100,
   "batches": 1,
   "base_counter": 2010000,
   "mongodb": {
     "uri": "mongodb+srv://claims-demo.vmwqj.mongodb.net",
     "zzdatabase": "fleet_tracking",
-    "database": "healthcare_new",
+    "database": "healthcare_temp",
     "zdatabase": "temp_test",
     "collection": "member",
     "username": "main_admin",
