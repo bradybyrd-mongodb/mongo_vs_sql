@@ -170,8 +170,8 @@ def batch_build_doc(collection, batch_map):
         parts = key.split(",")
         cur_base = key.replace(last_key, "")
         res = ""
-        print("# ------------------------------------------ #")
-        print(f'Key: {key}, cur: {cur_base}, parts: {parts}')
+        #print("# ------------------------------------------ #")
+        #print(f'Key: {key}, cur: {cur_base}, parts: {parts}')
         if key.lower() == collection:
             for item in value:
                 #print(f'Field: {item["field"]}')
@@ -207,7 +207,7 @@ def handle_parts(doc, parts, cnt, args, ipath = []):
         return
     else:
         ipart = parts[cnt]
-        print(f'IPART: {ipart}, cnt: {cnt}, parts: {parts}, ipath: {ipath}')
+        #print(f'IPART: {ipart}, cnt: {cnt}, parts: {parts}, ipath: {ipath}')
         curdoc = doc_path(doc, ipart, ipath)
         result = batch_sub(args[0],args[1],args[2],args[3], curdoc)
         if cnt == len(parts) - 1:
